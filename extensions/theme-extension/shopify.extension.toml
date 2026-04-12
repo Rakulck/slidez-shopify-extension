@@ -1,0 +1,7 @@
+api_version = "2026-07"
+uid = "bc2683fa-2494-baf3-7827-fb44f15688a7cc27f826"
+
+[[extensions]]
+type = "theme"
+name = "Virtual Try-On Widget"
+handle = "virtual-tryon-widget"

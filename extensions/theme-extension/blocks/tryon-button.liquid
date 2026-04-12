@@ -1,0 +1,76 @@
+{{ 'tryon-widget.css' | asset_url | stylesheet_tag }}
+
+<button
+  id="tryon-btn-{{ product.id | split: '/' | last }}"
+  class="tryon-trigger-btn"
+  data-tryon-product-id="{{ product.id | split: '/' | last }}"
+  data-tryon-shop="{{ shop.permanent_domain }}"
+  data-tryon-color="{{ block.settings.button_color }}"
+  data-tryon-country="{{ localization.country.iso_code }}"
+  style="
+    display: none;
+    --tryon-color: {{ block.settings.button_color }};
+    background: var(--tryon-color);
+    color: #fff;
+    width: 100%;
+    height: 44px;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+  "
+>
+  {{ block.settings.button_text }}
+</button>
+
+<script>
+  (function () {
+    var productId = "{{ product.id | split: '/' | last }}";
+    var btn = document.getElementById("tryon-btn-" + productId);
+    var loaded = false;
+
+    // Check if try-on is enabled for this product via App Proxy
+    fetch("/apps/try-on?productId=" + productId)
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.enabled) {
+          btn.style.display = "";
+        }
+      })
+      .catch(function () {
+        // fetch failed — show button anyway so it's not invisible
+        btn.style.display = "";
+      });
+
+    btn.addEventListener("click", function () {
+      if (!loaded) {
+        loaded = true;
+        var s = document.createElement("script");
+        s.src = {{ 'tryon-widget.js' | asset_url | json }};
+        document.head.appendChild(s);
+      }
+    });
+  }());
+</script>
+
+{% schema %}
+{
+  "name": "Try It On Button",
+  "target": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "button_text",
+      "label": "Button text",
+      "default": "Try It On"
+    },
+    {
+      "type": "color",
+      "id": "button_color",
+      "label": "Button color",
+      "default": "#000000"
+    }
+  ]
+}
+{% endschema %}

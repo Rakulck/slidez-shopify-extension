@@ -1,0 +1,15 @@
+{
+  "blocks": {
+    "tryon-button": {
+      "name": "Try It On Button",
+      "settings": {
+        "button_text": {
+          "label": "Button text"
+        },
+        "button_color": {
+          "label": "Button color"
+        }
+      }
+    }
+  }
+}
