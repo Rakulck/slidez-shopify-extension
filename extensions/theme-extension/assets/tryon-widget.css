@@ -4,26 +4,37 @@
 .tryon-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   z-index: 9998;
   opacity: 0;
-  transition: opacity 200ms ease;
+  transition: opacity 250ms ease;
 }
 .tryon-overlay.tryon-visible {
   opacity: 1;
 }
 
-/* ── Panel ── */
+/* ── Bounce-in animation (desktop) ── */
+@keyframes tryon-bounce-in {
+  0%   { opacity: 0; transform: translate(-50%, calc(-50% + 28px)) scale(0.94); }
+  60%  { transform: translate(-50%, calc(-50% - 5px)) scale(1.015); }
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+/* ── Panel (frosted glass) ── */
 .tryon-panel {
   position: fixed;
   z-index: 9999;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.93);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   display: flex;
   flex-direction: column;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.18), 0 4px 16px rgba(0, 0, 0, 0.08);
   opacity: 0;
-  transform: translateY(16px);
-  transition: opacity 200ms ease, transform 200ms ease;
-  /* Mobile: full screen */
+  transition: opacity 250ms ease;
+  /* Mobile: full-screen sheet */
   inset: 0;
   border-radius: 0;
   max-height: 100vh;
@@ -31,51 +42,52 @@
 }
 .tryon-panel.tryon-visible {
   opacity: 1;
-  transform: translateY(0);
 }
 
-/* Desktop: centered card */
+/* Desktop: centred card with bounce */
 @media (min-width: 641px) {
   .tryon-panel {
     inset: auto;
     top: 50%;
     left: 50%;
-    transform: translate(-50%, calc(-50% + 16px));
-    width: 460px;
+    transform: translate(-50%, calc(-50% + 28px)) scale(0.94);
+    width: 480px;
     max-height: 90vh;
-    border-radius: 12px;
+    border-radius: 20px;
     overflow-y: auto;
+    transition: none;
   }
   .tryon-panel.tryon-visible {
-    transform: translate(-50%, -50%);
+    animation: tryon-bounce-in 420ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   }
 }
 
 /* ── Close button ── */
 .tryon-close {
   position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 44px;
-  height: 44px;
+  top: 12px;
+  right: 12px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: none;
+  background: rgba(0, 0, 0, 0.06);
   border: none;
   cursor: pointer;
-  font-size: 20px;
+  font-size: 16px;
   color: #555;
-  border-radius: 6px;
+  border-radius: 50%;
   flex-shrink: 0;
+  transition: background 150ms;
 }
 .tryon-close:hover {
-  background: #f3f3f3;
+  background: rgba(0, 0, 0, 0.12);
 }
 
 /* ── Panel inner padding ── */
 .tryon-panel-inner {
-  padding: 48px 24px 24px;
+  padding: 52px 28px 28px;
   flex: 1;
 }
 
@@ -93,18 +105,28 @@
 .tryon-consent-step {
   align-items: center;
   text-align: center;
+  padding-top: 8px;
 }
 .tryon-consent-title {
-  font-size: 18px;
-  font-weight: 600;
+  font-size: 22px;
+  font-weight: 700;
   margin: 0;
   color: #111;
+  letter-spacing: -0.3px;
+}
+.tryon-consent-subtitle {
+  font-size: 15px;
+  color: #777;
+  margin: 0;
 }
 .tryon-consent-body {
-  font-size: 14px;
-  line-height: 1.6;
-  color: #444;
+  font-size: 13px;
+  line-height: 1.65;
+  color: #555;
   margin: 0;
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 12px;
+  padding: 14px 16px;
 }
 .tryon-consent-actions {
   display: flex;
@@ -113,32 +135,121 @@
   width: 100%;
 }
 
+/* ── Step: Mode Select ── */
+.tryon-mode-step {
+  padding-top: 4px;
+}
+.tryon-mode-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111;
+  margin: 0;
+  text-align: center;
+  letter-spacing: -0.2px;
+}
+.tryon-mode-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 4px;
+}
+.tryon-mode-card {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1.5px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 22px 20px;
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition:
+    transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    border-color 200ms ease,
+    box-shadow 200ms ease;
+}
+.tryon-mode-card:hover {
+  transform: scale(1.025);
+  border-color: var(--tryon-color, #000);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.09);
+}
+.tryon-mode-icon {
+  font-size: 30px;
+  line-height: 1;
+}
+.tryon-mode-label {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111;
+}
+.tryon-mode-desc {
+  font-size: 13px;
+  color: #777;
+}
+
+/* ── Step header (back + title) ── */
+.tryon-step-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.tryon-back-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #888;
+  font-size: 13px;
+  padding: 4px 0;
+  transition: color 150ms;
+  flex-shrink: 0;
+}
+.tryon-back-btn:hover {
+  color: #111;
+}
+.tryon-step-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111;
+}
+
 /* ── Step: Upload ── */
 .tryon-dropzone {
-  border: 2px dashed #ccc;
-  border-radius: 8px;
-  height: 180px;
+  border: 2px dashed #d1d5db;
+  border-radius: 12px;
+  min-height: 156px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   cursor: pointer;
-  transition: border-color 150ms, background 150ms;
+  transition: border-color 150ms ease, background 150ms ease;
   position: relative;
+  padding: 24px;
 }
 .tryon-dropzone.dragging {
   border-color: var(--tryon-color, #000);
-  background: rgba(0, 0, 0, 0.03);
+  background: rgba(0, 0, 0, 0.025);
 }
 .tryon-dropzone-icon {
-  font-size: 32px;
+  font-size: 30px;
   line-height: 1;
 }
 .tryon-dropzone-label {
   font-size: 14px;
-  color: #666;
+  color: #555;
   text-align: center;
+  pointer-events: none;
+}
+.tryon-dropzone-link {
+  color: var(--tryon-color, #000);
+  font-weight: 500;
+  text-decoration: underline;
+}
+.tryon-dropzone-hint {
+  font-size: 11px;
+  color: #9ca3af;
   pointer-events: none;
 }
 .tryon-dropzone-input {
@@ -149,35 +260,131 @@
   width: 100%;
   height: 100%;
 }
+
+/* Preview + crop-grid overlay */
 .tryon-preview-wrap {
   display: flex;
   justify-content: center;
+  position: relative;
 }
 .tryon-preview {
-  width: 100px;
-  height: 100px;
+  width: 120px;
+  height: 160px;
   object-fit: cover;
-  border-radius: 8px;
-  border: 1px solid #e5e5e5;
+  border-radius: 10px;
+  border: 1.5px solid #e5e5e5;
   display: none;
 }
+/* Rule-of-thirds crop guide rendered purely in CSS */
+.tryon-crop-grid {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 120px;
+  height: 160px;
+  border-radius: 10px;
+  display: none;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.4) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.4) 1px, transparent 1px);
+  background-size: 40px 53.33px;
+  border: 1.5px solid rgba(255, 255, 255, 0.55);
+}
+
 .tryon-privacy-note {
-  font-size: 12px;
-  color: #888;
+  font-size: 11px;
+  color: #9ca3af;
   text-align: center;
   margin: 0;
+}
+
+/* ── Step: AI Model ── */
+.tryon-ai-step {
+  gap: 20px;
+}
+.tryon-selector-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.tryon-selector-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+}
+.tryon-selector-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.tryon-selector-pill {
+  padding: 8px 20px;
+  border-radius: 20px;
+  border: 1.5px solid #e5e7eb;
+  background: #fff;
+  font-size: 14px;
+  color: #333;
+  cursor: pointer;
+  transition:
+    transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    border-color 180ms ease,
+    background 180ms ease,
+    color 180ms ease;
+}
+.tryon-selector-pill:hover {
+  transform: scale(1.06);
+  border-color: var(--tryon-color, #000);
+}
+.tryon-selector-pill.selected {
+  background: var(--tryon-color, #000);
+  color: #fff;
+  border-color: var(--tryon-color, #000);
+  transform: scale(1.06);
+}
+
+/* Skin tone circular swatches */
+.tryon-tone-swatches {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.tryon-tone-swatch {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2.5px solid transparent;
+  cursor: pointer;
+  outline: none;
+  transition:
+    transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+.tryon-tone-swatch:hover {
+  transform: scale(1.18);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.22);
+}
+.tryon-tone-swatch.selected {
+  border-color: var(--tryon-color, #000);
+  transform: scale(1.22);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.85), 0 3px 10px rgba(0, 0, 0, 0.22);
 }
 
 /* ── Step: Loading ── */
 .tryon-loading-step {
   align-items: center;
   text-align: center;
-  gap: 20px;
+  gap: 24px;
+  padding: 20px 0;
 }
 .tryon-spinner {
-  width: 44px;
-  height: 44px;
-  border: 3px solid #e5e5e5;
+  width: 52px;
+  height: 52px;
+  border: 3px solid rgba(0, 0, 0, 0.08);
   border-top-color: var(--tryon-color, #000);
   border-radius: 50%;
   animation: tryon-spin 0.8s linear infinite;
@@ -188,13 +395,14 @@
 }
 .tryon-loading-text {
   font-size: 15px;
-  color: #444;
+  color: #555;
   margin: 0;
+  transition: opacity 300ms ease;
 }
 .tryon-progress-track {
   width: 100%;
-  height: 6px;
-  background: #e5e5e5;
+  height: 5px;
+  background: rgba(0, 0, 0, 0.08);
   border-radius: 99px;
   overflow: hidden;
 }
@@ -203,18 +411,20 @@
   width: 0%;
   background: var(--tryon-color, #000);
   border-radius: 99px;
-  transition: width 300ms ease;
+  transition: width 250ms ease;
 }
 
 /* ── Step: Result ── */
 .tryon-result-step {
   align-items: center;
+  gap: 20px;
 }
 .tryon-result-img {
-  max-height: 55vh;
+  max-height: 52vh;
   width: 100%;
   object-fit: contain;
-  border-radius: 8px;
+  border-radius: 12px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.1);
 }
 .tryon-result-actions {
   display: flex;
@@ -227,9 +437,11 @@
 .tryon-error-step {
   align-items: center;
   text-align: center;
+  padding: 16px 0;
+  gap: 12px;
 }
 .tryon-error-icon {
-  font-size: 36px;
+  font-size: 40px;
   line-height: 1;
 }
 .tryon-error-title {
@@ -240,35 +452,152 @@
 }
 .tryon-error-msg {
   font-size: 14px;
-  color: #555;
+  color: #666;
   margin: 0;
 }
 
 /* ── Buttons ── */
 .tryon-btn-primary,
-.tryon-btn-secondary {
+.tryon-btn-secondary,
+.tryon-btn-ghost {
   width: 100%;
-  height: 44px;
-  border-radius: 8px;
+  height: 46px;
+  border-radius: 12px;
   font-size: 15px;
   font-weight: 500;
   cursor: pointer;
-  border: none;
-  transition: opacity 150ms, filter 150ms;
+  transition:
+    transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    filter 150ms ease,
+    opacity 150ms ease;
 }
 .tryon-btn-primary {
   background: var(--tryon-color, #000);
   color: #fff;
   border: none;
 }
-.tryon-btn-primary:hover {
+.tryon-btn-primary:hover:not(:disabled) {
   filter: brightness(1.12);
+  transform: translateY(-1px);
+}
+.tryon-btn-primary:active:not(:disabled) {
+  transform: scale(0.98);
 }
 .tryon-btn-secondary {
   background: #fff;
   color: #111;
-  border: 1px solid #d1d5db;
+  border: 1.5px solid #e5e7eb;
 }
 .tryon-btn-secondary:hover {
   background: #f9fafb;
+  transform: translateY(-1px);
+}
+.tryon-btn-ghost {
+  background: transparent;
+  color: #888;
+  border: none;
+  height: 38px;
+}
+.tryon-btn-ghost:hover {
+  color: #111;
+}
+
+/* ── Trigger Button (storefront) ── */
+/*
+ * Sits alongside Add to Cart / Buy Now.
+ * Dimensions are mirrored from ATC at runtime — we add ZERO sizing here.
+ * Visual layers (back → front):
+ *   1. box-shadow glow  — brand-coloured halo, pulsing in sync with breathe
+ *   2. button surface   — scale breathe (3s)
+ *   3. ::after shimmer  — diagonal light sweep (3.5s)
+ */
+.tryon-trigger-btn {
+  position: relative;
+  overflow: hidden;           /* clips the shimmer sweep */
+  /* static fallback — when animation stops on hover this value is used,
+     preventing a box-shadow snap-to-zero pop */
+  box-shadow:
+    0  4px 10px rgba(0, 0, 0, 0.22),
+    0  8px 24px rgba(0, 0, 0, 0.14);
+  animation: tryon-btn-glow 3s ease-in-out infinite;
+}
+
+/* ── Layer 3: shimmer sweep ── */
+.tryon-trigger-btn::after {
+  content: '';
+  position: absolute;
+  top: -10%;
+  left: 0;
+  width: 100%;
+  height: 120%;
+  background: linear-gradient(
+    100deg,
+    transparent              0%,
+    transparent             28%,
+    rgba(255, 255, 255, 0.30) 50%,
+    transparent             72%,
+    transparent            100%
+  );
+  transform: translateX(-110%);
+  /* offset by 0.5s from the breathe so shimmer fires at the top of the breathe peak */
+  animation: tryon-btn-shimmer 5s ease-in-out 0.5s infinite;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+/*
+ * Breathe — scale only; glow handled separately so hover can override box-shadow freely.
+ * 0.8% scale at a 360px button ≈ 2.9px — imperceptible layout shift, very visible "life".
+ */
+/*
+ * Glow — brand-coloured box-shadow that peaks in sync with the scale breathe.
+ * box-shadow is never clipped by overflow:hidden, so it bleeds outside the button edges.
+ * color-mix() mixes --tryon-color with transparent to produce a 0→38% opacity pulse.
+ *
+ * Layer breakdown:
+ *   shadow-1: permanent base elevation (depth at rest)
+ *   shadow-2: ambient lift (grows slightly at peak)
+ *   shadow-3: brand glow halo (0 spread at rest → 22px spread at peak)
+ */
+@keyframes tryon-btn-glow {
+  0%, 100% {
+    box-shadow:
+      0  4px 10px rgba(0, 0, 0, 0.22),
+      0  8px 24px rgba(0, 0, 0, 0.14),
+      0  0    0   color-mix(in srgb, var(--tryon-color, #000)  0%, transparent);
+  }
+  50% {
+    box-shadow:
+      0  4px 10px rgba(0, 0, 0, 0.20),
+      0  8px 26px rgba(0, 0, 0, 0.16),
+      0  0   18px color-mix(in srgb, var(--tryon-color, #000) 32%, transparent);
+  }
+}
+
+/*
+ * Shimmer timing (3.5s + 0.5s delay):
+ *   0–28%   → resting off-screen left  (pause: ~0.98s)
+ *   28–64%  → sweeping across          (sweep: ~1.26s)
+ *   64–100% → resting off-screen right (pause: ~1.26s)
+ */
+@keyframes tryon-btn-shimmer {
+  0%,  28%  { transform: translateX(-110%); }
+  64%, 100% { transform: translateX(210%);  }
+}
+
+/*
+ * Hover — kill animations so the transition CSS takes over cleanly.
+ * Delivers: lift + spring scale + strong colour ring + coloured lift shadow.
+ * The 180ms spring transition means it snaps up like a physical object.
+ */
+/* On hover/active: stop our animations and step aside —
+   the theme's own button hover CSS takes over exactly as it
+   does for Add to Cart and Buy Now. */
+.tryon-trigger-btn:hover,
+.tryon-trigger-btn:active {
+  animation: none;
+}
+.tryon-trigger-btn:hover::after,
+.tryon-trigger-btn:active::after {
+  animation: none;
 }

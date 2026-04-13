@@ -2,7 +2,7 @@
 
 <button
   id="tryon-btn-{{ product.id | split: '/' | last }}"
-  class="tryon-trigger-btn"
+  class="tryon-trigger-btn {{ block.settings.button_classes }}"
   data-tryon-product-id="{{ product.id | split: '/' | last }}"
   data-tryon-shop="{{ shop.permanent_domain }}"
   data-tryon-color="{{ block.settings.button_color }}"
@@ -12,13 +12,9 @@
     --tryon-color: {{ block.settings.button_color }};
     background: var(--tryon-color);
     color: #fff;
-    width: 100%;
-    height: 44px;
     border: none;
-    border-radius: 8px;
-    font-size: 15px;
-    font-weight: 500;
     cursor: pointer;
+    text-align: center;
   "
 >
   {{ block.settings.button_text }}
@@ -30,17 +26,60 @@
     var btn = document.getElementById("tryon-btn-" + productId);
     var loaded = false;
 
+    // Copy computed dimensions from the Add to Cart / Buy Now button so
+    // the Try It On button is pixel-identical regardless of the theme.
+    function mirrorButtonDimensions() {
+      // Covers every major Shopify theme's product-form submit button
+      var atcBtn = document.querySelector(
+        'form[action*="/cart/add"] button[type="submit"]:not(#' + btn.id + '),' +
+        'form[action="/cart/add"] button[type="submit"]:not(#' + btn.id + '),' +
+        '[name="add"]:not(#' + btn.id + ')'
+      );
+      if (!atcBtn) return;
+      var cs = window.getComputedStyle(atcBtn);
+      // Use the exact rendered pixel width — not 100% — so we don't
+      // expand to fill the parent container the way the ATC button's
+      // siblings are laid out.
+      btn.style.width         = cs.width;
+      btn.style.height        = cs.height;
+      btn.style.minHeight     = cs.minHeight;
+      btn.style.fontSize      = cs.fontSize;
+      btn.style.fontWeight    = cs.fontWeight;
+      btn.style.lineHeight    = cs.lineHeight;
+      btn.style.letterSpacing = cs.letterSpacing;
+      btn.style.textTransform = cs.textTransform;
+      btn.style.borderRadius  = cs.borderRadius;
+      btn.style.paddingTop    = cs.paddingTop;
+      btn.style.paddingBottom = cs.paddingBottom;
+      btn.style.paddingLeft   = cs.paddingLeft;
+      btn.style.paddingRight  = cs.paddingRight;
+      btn.style.fontFamily    = cs.fontFamily;
+      // Align text the same way the ATC button does
+      btn.style.textAlign     = cs.textAlign;
+      btn.style.justifyContent = cs.justifyContent;
+      btn.style.alignItems    = cs.alignItems;
+    }
+
+    function showButton() {
+      btn.style.display = "";
+      // Mirror after the button is in the layout so getComputedStyle is accurate
+      requestAnimationFrame(mirrorButtonDimensions);
+      // Re-mirror whenever the viewport resizes so max-width breakpoints stay in sync
+      if (window.ResizeObserver) {
+        var ro = new ResizeObserver(function () { mirrorButtonDimensions(); });
+        ro.observe(document.documentElement);
+      }
+    }
+
     // Check if try-on is enabled for this product via App Proxy
     fetch("/apps/try-on?productId=" + productId)
       .then(function (r) { return r.json(); })
       .then(function (data) {
-        if (data.enabled) {
-          btn.style.display = "";
-        }
+        if (data.enabled) { showButton(); }
       })
       .catch(function () {
         // fetch failed — show button anyway so it's not invisible
-        btn.style.display = "";
+        showButton();
       });
 
     btn.addEventListener("click", function () {
@@ -70,6 +109,12 @@
       "id": "button_color",
       "label": "Button color",
       "default": "#000000"
+    },
+    {
+      "type": "text",
+      "id": "button_classes",
+      "label": "Theme button CSS classes",
+      "info": "Paste your theme's button class(es) to match Add to Cart sizing — e.g. btn btn--full-width (Debut) or button button--full-width (Dawn)"
     }
   ]
 }
