@@ -22,6 +22,16 @@ model ProductState {
   @@unique([shop, productId])
 }
 
+model MerchantConfig {
+  shop           String  @id
+  buttonText     String  @default("Try It On")
+  buttonColor    String  @default("#000000")
+  buttonPosition String  @default("below-add-to-cart")
+  borderRadius   Int     @default(8)
+  fullWidth      Boolean @default(true)
+  showWatermark  Boolean @default(true)
+}
+
 model Session {
   id                  String    @id
   shop                String

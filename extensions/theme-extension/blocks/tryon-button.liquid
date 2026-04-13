@@ -28,7 +28,7 @@
 
     // Copy computed dimensions from the Add to Cart / Buy Now button so
     // the Try It On button is pixel-identical regardless of the theme.
-    function mirrorButtonDimensions() {
+    function mirrorButtonDimensions(skipWidth) {
       // Covers every major Shopify theme's product-form submit button
       var atcBtn = document.querySelector(
         'form[action*="/cart/add"] button[type="submit"]:not(#' + btn.id + '),' +
@@ -37,10 +37,9 @@
       );
       if (!atcBtn) return;
       var cs = window.getComputedStyle(atcBtn);
-      // Use the exact rendered pixel width — not 100% — so we don't
-      // expand to fill the parent container the way the ATC button's
-      // siblings are laid out.
-      btn.style.width         = cs.width;
+      if (!skipWidth) {
+        btn.style.width         = cs.width;
+      }
       btn.style.height        = cs.height;
       btn.style.minHeight     = cs.minHeight;
       btn.style.fontSize      = cs.fontSize;
@@ -48,38 +47,75 @@
       btn.style.lineHeight    = cs.lineHeight;
       btn.style.letterSpacing = cs.letterSpacing;
       btn.style.textTransform = cs.textTransform;
-      btn.style.borderRadius  = cs.borderRadius;
       btn.style.paddingTop    = cs.paddingTop;
       btn.style.paddingBottom = cs.paddingBottom;
       btn.style.paddingLeft   = cs.paddingLeft;
       btn.style.paddingRight  = cs.paddingRight;
       btn.style.fontFamily    = cs.fontFamily;
-      // Align text the same way the ATC button does
       btn.style.textAlign     = cs.textAlign;
       btn.style.justifyContent = cs.justifyContent;
       btn.style.alignItems    = cs.alignItems;
     }
 
-    function showButton() {
+    function applyConfig(data) {
+      // Apply merchant dashboard settings to the button
+      if (data.buttonText) {
+        btn.textContent = data.buttonText;
+      }
+      if (data.buttonColor) {
+        btn.style.background = data.buttonColor;
+        btn.style.setProperty('--tryon-color', data.buttonColor);
+        btn.setAttribute('data-tryon-color', data.buttonColor);
+      }
+      if (data.borderRadius !== undefined) {
+        btn.style.borderRadius = data.borderRadius + 'px';
+      }
+      if (data.fullWidth === false) {
+        // Auto-size: don't mirror the ATC button width
+        btn.style.width = 'auto';
+        btn.style.minWidth = '160px';
+      }
+
+      // For floating-corner: detach from current position and fix to viewport
+      if (data.buttonPosition === 'floating-corner') {
+        document.body.appendChild(btn);
+        btn.style.position = 'fixed';
+        btn.style.bottom = '24px';
+        btn.style.right = '24px';
+        btn.style.zIndex = '9999';
+        btn.style.width = 'auto';
+        btn.style.minWidth = '0';
+        btn.style.boxShadow = '0 4px 16px rgba(0,0,0,0.25)';
+        btn.style.padding = '10px 18px';
+      }
+      // above/below: block stays where the merchant placed it in the theme editor
+    }
+
+    function showButton(skipWidth) {
       btn.style.display = "";
       // Mirror after the button is in the layout so getComputedStyle is accurate
-      requestAnimationFrame(mirrorButtonDimensions);
+      requestAnimationFrame(function () { mirrorButtonDimensions(skipWidth); });
       // Re-mirror whenever the viewport resizes so max-width breakpoints stay in sync
       if (window.ResizeObserver) {
-        var ro = new ResizeObserver(function () { mirrorButtonDimensions(); });
+        var ro = new ResizeObserver(function () { mirrorButtonDimensions(skipWidth); });
         ro.observe(document.documentElement);
       }
     }
 
-    // Check if try-on is enabled for this product via App Proxy
-    fetch("/apps/try-on?productId=" + productId)
+    // Check if try-on is enabled for this product via App Proxy.
+    // The response also includes merchant config (buttonText, buttonColor, etc.)
+    // so we apply those settings dynamically — no theme editor changes needed.
+    fetch("/apps/try-on?productId=" + productId + "&_t=" + Date.now())
       .then(function (r) { return r.json(); })
       .then(function (data) {
-        if (data.enabled) { showButton(); }
+        if (data.enabled) {
+          applyConfig(data);
+          showButton(data.fullWidth === false);
+        }
       })
       .catch(function () {
-        // fetch failed — show button anyway so it's not invisible
-        showButton();
+        // Fetch failed — show button with block schema defaults so it's never invisible
+        showButton(false);
       });
 
     btn.addEventListener("click", function () {
@@ -101,14 +137,16 @@
     {
       "type": "text",
       "id": "button_text",
-      "label": "Button text",
-      "default": "Try It On"
+      "label": "Button text (fallback)",
+      "default": "Try It On",
+      "info": "Used if the app dashboard settings can't be loaded. Set your primary text in the Slidez dashboard."
     },
     {
       "type": "color",
       "id": "button_color",
-      "label": "Button color",
-      "default": "#000000"
+      "label": "Button color (fallback)",
+      "default": "#000000",
+      "info": "Used if the app dashboard settings can't be loaded."
     },
     {
       "type": "text",

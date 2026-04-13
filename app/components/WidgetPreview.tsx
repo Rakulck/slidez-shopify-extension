@@ -2,21 +2,33 @@ interface WidgetPreviewProps {
   buttonText: string;
   buttonColor: string;
   buttonPosition: "below-add-to-cart" | "above-add-to-cart" | "floating-corner";
+  borderRadius?: number;
+  fullWidth?: boolean;
 }
 
-export function WidgetPreview({ buttonText, buttonColor, buttonPosition }: WidgetPreviewProps) {
+export function WidgetPreview({
+  buttonText,
+  buttonColor,
+  buttonPosition,
+  borderRadius = 8,
+  fullWidth = true,
+}: WidgetPreviewProps) {
   const tryOnButton = (
     <div
       style={{
         backgroundColor: buttonColor,
         color: "#ffffff",
         padding: "10px 16px",
-        borderRadius: 6,
+        borderRadius: borderRadius,
         fontSize: 13,
         fontWeight: 600,
         textAlign: "center",
         cursor: "pointer",
         userSelect: "none",
+        width: fullWidth ? "100%" : "auto",
+        minWidth: fullWidth ? undefined : 140,
+        alignSelf: fullWidth ? undefined : "flex-start",
+        boxSizing: "border-box",
       }}
     >
       {buttonText || "Try It On"}
@@ -33,6 +45,8 @@ export function WidgetPreview({ buttonText, buttonColor, buttonPosition }: Widge
         fontSize: 13,
         fontWeight: 600,
         textAlign: "center",
+        width: "100%",
+        boxSizing: "border-box",
       }}
     >
       Add to Cart
@@ -92,7 +106,7 @@ export function WidgetPreview({ buttonText, buttonColor, buttonPosition }: Widge
             backgroundColor: buttonColor,
             color: "#fff",
             padding: "8px 12px",
-            borderRadius: 20,
+            borderRadius: Math.min(borderRadius, 20),
             fontSize: 12,
             fontWeight: 600,
             boxShadow: "0 2px 8px rgba(0,0,0,0.2)",

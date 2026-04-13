@@ -11,11 +11,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     url.searchParams.get("shop") ??
     "";
 
+  const CORS = { "Access-Control-Allow-Origin": "*" };
+
   if (!shop || !productId) {
-    return json(
-      { enabled: false },
-      { headers: { "Access-Control-Allow-Origin": "*" } },
-    );
+    return json({ enabled: false }, { headers: CORS });
   }
 
   // Liquid gives numeric ID; DB stores full GID
@@ -25,8 +24,19 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     where: { shop_productId: { shop, productId: gid } },
   });
 
+  const enabled = record?.enabled ?? false;
+
+  const config = await prisma.merchantConfig.findUnique({ where: { shop } });
+
   return json(
-    { enabled: record?.enabled ?? false },
-    { headers: { "Access-Control-Allow-Origin": "*" } },
+    {
+      enabled,
+      buttonText: config?.buttonText ?? "Try It On",
+      buttonColor: config?.buttonColor ?? "#000000",
+      buttonPosition: config?.buttonPosition ?? "below-add-to-cart",
+      borderRadius: config?.borderRadius ?? 8,
+      fullWidth: config?.fullWidth ?? true,
+    },
+    { headers: CORS },
   );
 };
