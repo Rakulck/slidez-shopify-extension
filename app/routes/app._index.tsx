@@ -120,6 +120,9 @@ export default function Dashboard() {
                   <Button onClick={() => navigate("/app/products")} fullWidth>
                     Configure Products
                   </Button>
+                  <Button onClick={() => navigate("/app/analytics")} fullWidth>
+                    View Analytics
+                  </Button>
                   <Button onClick={() => navigate("/app/settings")} fullWidth>
                     Customize Widget
                   </Button>

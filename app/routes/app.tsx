@@ -25,9 +25,24 @@ export default function App() {
           Dashboard
         </Link>
         <Link to="/app/products">Products</Link>
+        <Link to="/app/analytics">Analytics</Link>
         <Link to="/app/settings">Settings</Link>
         <Link to="/app/billing">Billing</Link>
       </NavMenu>
+      <style>{`
+        /* Force page background */
+        html, body, .Polaris-Page, main {
+          background-color: #F4F6F8 !important;
+        }
+        
+        /* Prominent elevated cards */
+        .Polaris-Card {
+          background-color: #FFFFFF !important;
+          box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+          border-radius: 16px !important;
+          border: 1px solid rgba(0,0,0,0.03) !important;
+        }
+      `}</style>
       <Outlet />
     </AppProvider>
   );

@@ -2,11 +2,13 @@ import { Card, BlockStack, Text, InlineStack } from "@shopify/polaris";
 
 interface StatCardProps {
   title: string;
-  value: string | number;
+  value: string | number | React.ReactNode;
   trend?: string;
+  trendTone?: "success" | "critical";
+  footnote?: string;
 }
 
-export function StatCard({ title, value, trend }: StatCardProps) {
+export function StatCard({ title, value, trend, trendTone, footnote }: StatCardProps) {
   return (
     <Card>
       <BlockStack gap="200">
@@ -17,8 +19,13 @@ export function StatCard({ title, value, trend }: StatCardProps) {
           {String(value)}
         </Text>
         {trend && (
-          <Text as="p" variant="bodySm" tone="subdued">
+          <Text as="p" variant="bodySm" tone={trendTone ?? "subdued"}>
             {trend}
+          </Text>
+        )}
+        {footnote && (
+          <Text as="p" variant="bodySm" tone="subdued">
+            {footnote}
           </Text>
         )}
       </BlockStack>
