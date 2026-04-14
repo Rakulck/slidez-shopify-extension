@@ -61,10 +61,27 @@
     this.country = button.getAttribute('data-tryon-country') || '';
     this.jurisdiction = getJurisdiction(this.country);
 
+    // Get model image URLs - try data attributes first, then fallback to asset URL format
+    var modelManUrl = button.getAttribute('data-tryon-model-man');
+    var modelWomanUrl = button.getAttribute('data-tryon-model-woman');
+
+    // Generate Shopify asset URL format as fallback
+    if (!modelManUrl) {
+      var cdnUrl = document.currentScript?.src.split('/cdn/shop/')[0] + '/cdn/shop/';
+      modelManUrl = cdnUrl + 'files/model-man.jpg?v=' + Date.now();
+    }
+    if (!modelWomanUrl) {
+      var cdnUrl = document.currentScript?.src.split('/cdn/shop/')[0] + '/cdn/shop/';
+      modelWomanUrl = cdnUrl + 'files/model-woman.jpg?v=' + Date.now();
+    }
+
+    this.modelManUrl = modelManUrl;
+    this.modelWomanUrl = modelWomanUrl;
+
     // State
     this.mode = null; // 'upload' | 'ai'
     this.file = null;
-    this.aiOptions = { gender: null, bodyType: null, skinTone: null };
+    this.aiOptions = { gender: null, bodyType: null, skinTone: null, modelImage: null };
     this.uploadId = null;
     this.resultUrl = null;
     this.consentTimestamp = null;
@@ -213,6 +230,20 @@
       })(toneBtns[i]);
     }
 
+    // Model image selection
+    var modelImgBtns = panel.querySelectorAll('[data-tryon-model-image]');
+    for (var i = 0; i < modelImgBtns.length; i++) {
+      (function (btn) {
+        btn.addEventListener('click', function () {
+          var all = panel.querySelectorAll('[data-tryon-model-image]');
+          for (var j = 0; j < all.length; j++) { all[j].classList.remove('selected'); }
+          btn.classList.add('selected');
+          self.aiOptions.modelImage = btn.getAttribute('data-tryon-model-image');
+          self._checkAiReady();
+        });
+      })(modelImgBtns[i]);
+    }
+
     // Try again — flush state, back to mode select
     var tryAgainBtns = panel.querySelectorAll('[data-tryon-try-again]');
     for (var i = 0; i < tryAgainBtns.length; i++) {
@@ -246,7 +277,7 @@
   TryOnWidget.prototype._checkAiReady = function () {
     var btn = this._panel.querySelector('[data-tryon-generate]');
     if (!btn) return;
-    var ready = !!(this.aiOptions.gender && this.aiOptions.bodyType && this.aiOptions.skinTone);
+    var ready = !!(this.aiOptions.gender && this.aiOptions.bodyType && this.aiOptions.skinTone && this.aiOptions.modelImage);
     btn.disabled = !ready;
     btn.style.opacity = ready ? '1' : '0.4';
   };
@@ -446,6 +477,65 @@
     toneSection.appendChild(toneRow);
     step.appendChild(toneSection);
 
+    // AI Model Images section
+    var modelSection = document.createElement('div');
+    modelSection.className = 'tryon-selector-group';
+    var modelLabel = document.createElement('div');
+    modelLabel.className = 'tryon-selector-label';
+    modelLabel.textContent = 'Model Image';
+    var modelRow = document.createElement('div');
+    modelRow.className = 'tryon-model-cards';
+
+    var m1 = document.createElement('div');
+    m1.className = 'tryon-model-card-item';
+    m1.setAttribute('data-tryon-model-image', 'male');
+    var img1 = document.createElement('img');
+    img1.src = self.modelManUrl;
+    img1.alt = 'Male Model';
+    img1.onerror = function() {
+      // Fallback: try alternative paths if primary fails
+      var fallbacks = [
+        '/cdn/shop/files/model-man.jpg',
+        'model-man.jpg',
+        self.modelManUrl.replace(/\?.*/, '')
+      ];
+      for (var i = 0; i < fallbacks.length; i++) {
+        if (fallbacks[i] !== img1.src) {
+          img1.src = fallbacks[i];
+          return;
+        }
+      }
+    };
+    m1.appendChild(img1);
+
+    var m2 = document.createElement('div');
+    m2.className = 'tryon-model-card-item';
+    m2.setAttribute('data-tryon-model-image', 'female');
+    var img2 = document.createElement('img');
+    img2.src = self.modelWomanUrl;
+    img2.alt = 'Female Model';
+    img2.onerror = function() {
+      // Fallback: try alternative paths if primary fails
+      var fallbacks = [
+        '/cdn/shop/files/model-woman.jpg',
+        'model-woman.jpg',
+        self.modelWomanUrl.replace(/\?.*/, '')
+      ];
+      for (var i = 0; i < fallbacks.length; i++) {
+        if (fallbacks[i] !== img2.src) {
+          img2.src = fallbacks[i];
+          return;
+        }
+      }
+    };
+    m2.appendChild(img2);
+
+    modelRow.appendChild(m1);
+    modelRow.appendChild(m2);
+    modelSection.appendChild(modelLabel);
+    modelSection.appendChild(modelRow);
+    step.appendChild(modelSection);
+
     var generate = document.createElement('button');
     generate.className = 'tryon-btn-primary';
     generate.setAttribute('data-tryon-generate', '');
@@ -603,7 +693,7 @@
   TryOnWidget.prototype._reset = function () {
     this.mode = null;
     this.file = null;
-    this.aiOptions = { gender: null, bodyType: null, skinTone: null };
+    this.aiOptions = { gender: null, bodyType: null, skinTone: null, modelImage: null };
     this.uploadId = null;
     this.resultUrl = null;
     this.consentTimestamp = null;
@@ -632,7 +722,7 @@
     var bar = this._panel.querySelector('[data-tryon-progress]');
     if (bar) { bar.style.width = '0%'; }
 
-    var selected = this._panel.querySelectorAll('.tryon-selector-pill.selected, .tryon-tone-swatch.selected');
+    var selected = this._panel.querySelectorAll('.tryon-selector-pill.selected, .tryon-tone-swatch.selected, .tryon-model-card-item.selected');
     for (var i = 0; i < selected.length; i++) { selected[i].classList.remove('selected'); }
   };
 
