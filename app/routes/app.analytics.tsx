@@ -8,7 +8,6 @@ import {
   BlockStack,
   InlineGrid,
   Text,
-  Button,
   EmptyState,
   DataTable,
   ResourceList,
@@ -82,15 +81,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
   const range = url.searchParams.get("range") ?? "30";
 
-  // Fetch merchant config
-  let config: Record<string, unknown> = {};
-  try {
-    config = await firebaseGet("/api/merchant/config", shop);
-  } catch {
-    // Firebase not connected yet
-  }
 
-  const planId = (config as any)?.planId ?? "free";
+
+
 
   // TEMP: Bypass paywall for testing
   // Check if user has access to analytics (Pro or Enterprise only)
@@ -107,14 +100,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     console.error("DEBUG: Failed to reach Analytics API:", err.message);
   }
 
-  const loaderData = analytics as AnalyticsData;
-  const totalTryOnsThisMonth = loaderData.totalTryOnsThisMonth;
-  const totalTryOnsPrevMonth = loaderData.totalTryOnsPrevMonth;
-  const monthlyUsage = loaderData.monthlyUsage;
-  const topProductsRaw = loaderData.topProducts;
-  const activeProductsCount = loaderData.activeProductsCount;
-  const bestDays = loaderData.bestDays;
-  const deviceSplit = loaderData.deviceSplit;
+  const totalTryOnsThisMonth = (analytics as any)?.totalTryOnsThisMonth ?? 0;
+  const monthlyUsage = (analytics as any)?.monthlyUsage ?? [];
 
   // Show empty state when there is genuinely no data yet
   if (totalTryOnsThisMonth === 0 && monthlyUsage.length === 0) {
@@ -200,30 +187,32 @@ function calculateTrend(
   };
 }
 
-export default function Analytics() {
-  const { paywalled, empty, range = "30", analytics } = useLoaderData<typeof loader>();
+export default function Analytics() {  const { paywalled, empty, range = "30", analytics } = useLoaderData<typeof loader>();
   const fetcher = useFetcher();
 
   const currentRange = fetcher.formData?.get("range") ?? range;
 
-  if (paywalled) {
-    return (
-      <Page>
-        <TitleBar title="Analytics" />
-        <EmptyState
-          heading="Upgrade to Pro to unlock Analytics"
-          action={{
-            content: "View Plans",
-            url: "/app/billing",
-          }}
-        >
-          <Text as="p" variant="bodyMd">
-            See which products drive the most try-ons, track usage trends, and
-            find your best days to run promotions.
-          </Text>
-        </EmptyState>
-      </Page>
-    );
+  if (paywalled || !analytics) {
+    if (paywalled) {
+      return (
+        <Page>
+          <TitleBar title="Analytics" />
+          <EmptyState
+            heading="Upgrade to Pro to unlock Analytics"
+            action={{
+              content: "View Plans",
+              url: "/app/billing",
+            }}
+          >
+            <Text as="p" variant="bodyMd">
+              See which products drive the most try-ons, track usage trends, and
+              find your best days to run promotions.
+            </Text>
+          </EmptyState>
+        </Page>
+      );
+    }
+    return null;
   }
 
   if (empty) {
@@ -246,29 +235,19 @@ export default function Analytics() {
     );
   }
 
-  if (!analytics) {
-    return null;
-  }
+  // Destructure with fallbacks to avoid "not defined" errors
+  const {
+    totalTryOnsThisMonth = 0,
+    totalTryOnsPrevMonth = 0,
+    activeProductsCount = 0,
+    deviceSplit = { mobile: 0, desktop: 0 },
+    bestDays = [],
+    topProducts = []
+  } = analytics;
 
-  const tryOnTrend =
-    calculateTrend(
-      analytics.totalTryOnsThisMonth,
-      analytics.totalTryOnsPrevMonth,
-    ) ?? undefined;
+  const tryOnTrend = calculateTrend(totalTryOnsThisMonth, totalTryOnsPrevMonth) ?? undefined;
+  const maxDayCount = bestDays.length > 0 ? Math.max(...bestDays.map((d) => d.count)) : 0;
 
-  const cartTrend =
-    analytics.cartAddRate !== null &&
-    analytics.cartAddRatePrevPeriod !== null
-      ? calculateTrend(
-          analytics.cartAddRate * 100,
-          analytics.cartAddRatePrevPeriod * 100,
-        )
-      : undefined;
-
-  const maxDayCount =
-    analytics.bestDays.length > 0
-      ? Math.max(...analytics.bestDays.map((d) => d.count))
-      : 0;
 
   return (
     <Page>
@@ -295,10 +274,9 @@ export default function Analytics() {
 
         {/* Stat Cards Row 1 */}
         <InlineGrid columns={3} gap="400">
-          {/* Try-ons This Month */}
           <StatCard
             title="Try-ons This Month"
-            value={analytics.totalTryOnsThisMonth}
+            value={totalTryOnsThisMonth}
             trend={tryOnTrend?.trend}
             trendTone={tryOnTrend?.tone}
           />
@@ -306,7 +284,7 @@ export default function Analytics() {
           {/* Active Products */}
           <StatCard
             title="Active Products"
-            value={analytics.activeProductsCount}
+            value={activeProductsCount}
             footnote="Unique products tried on this period"
           />
 
@@ -317,23 +295,23 @@ export default function Analytics() {
                 Mobile vs Desktop
               </Text>
               <Text as="p" variant="heading2xl" fontWeight="bold">
-                {Math.round(analytics.deviceSplit.mobile * 100)}% Mobile
+                {Math.round(deviceSplit.mobile * 100)}% Mobile
               </Text>
               <BlockStack gap="300">
                 <InlineStack gap="200" blockAlign="center">
                   <div style={{ flex: 1 }}>
-                    <ProgressBar progress={analytics.deviceSplit.mobile} />
+                    <ProgressBar progress={deviceSplit.mobile} />
                   </div>
                   <Text as="span" variant="bodySm">
-                    {Math.round(analytics.deviceSplit.mobile * 100)}%
+                    {Math.round(deviceSplit.mobile * 100)}%
                   </Text>
                 </InlineStack>
                 <InlineStack gap="200" blockAlign="center">
                   <div style={{ flex: 1 }}>
-                    <ProgressBar progress={analytics.deviceSplit.desktop} />
+                    <ProgressBar progress={deviceSplit.desktop} />
                   </div>
                   <Text as="span" variant="bodySm">
-                    {Math.round(analytics.deviceSplit.desktop * 100)}%
+                    {Math.round(deviceSplit.desktop * 100)}%
                   </Text>
                 </InlineStack>
               </BlockStack>
@@ -349,9 +327,9 @@ export default function Analytics() {
                 <Text as="h2" variant="headingMd">
                   Top Products by Try-On
                 </Text>
-                {analytics.topProducts && analytics.topProducts.length > 0 ? (
+                {topProducts && topProducts.length > 0 ? (
                   <ResourceList
-                    items={analytics.topProducts}
+                    items={topProducts}
                     renderItem={(product) => (
                       <ResourceItem id={product.productId}>
                         <InlineStack

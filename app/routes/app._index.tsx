@@ -11,7 +11,6 @@ import {
   Button,
   InlineStack,
   Icon,
-  Divider,
 } from "@shopify/polaris";
 import { CheckCircleIcon, MinusCircleIcon } from "@shopify/polaris-icons";
 import { TitleBar } from "@shopify/app-bridge-react";

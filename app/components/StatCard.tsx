@@ -1,4 +1,4 @@
-import { Card, BlockStack, Text, InlineStack } from "@shopify/polaris";
+import { Card, BlockStack, Text } from "@shopify/polaris";
 
 interface StatCardProps {
   title: string;

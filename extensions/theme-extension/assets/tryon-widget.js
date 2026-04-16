@@ -6,7 +6,6 @@
   var FB_REGION  = 'us-central1';
   var FB_CALLABLE_BASE = 'https://' + FB_REGION + '-' + FB_PROJECT + '.cloudfunctions.net';
 
-  var PROXY_BASE = '/apps/try-on';
   var MAX_MB = 10;
   var TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic'];
 
@@ -24,31 +23,9 @@
     GENERAL: 'Your photo is used only to generate your virtual try-on preview and is deleted from our servers the moment your result is ready. We never store, share, or use your image for any purpose beyond this single try-on session.'
   };
 
-  // Mock result: a purple-gradient placeholder silhouette (no external URL)
-  var MOCK_RESULT = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
-    '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="600" viewBox="0 0 400 600">' +
-    '<defs>' +
-    '<linearGradient id="bg" x1="0%" y1="0%" x2="0%" y2="100%">' +
-    '<stop offset="0%" style="stop-color:#f3eeff"/>' +
-    '<stop offset="100%" style="stop-color:#ddd0f8"/>' +
-    '</linearGradient>' +
-    '</defs>' +
-    '<rect width="400" height="600" fill="url(#bg)"/>' +
-    '<ellipse cx="200" cy="130" rx="54" ry="60" fill="#c4a8e8"/>' +
-    '<rect x="110" y="210" width="180" height="240" rx="22" fill="#b490de"/>' +
-    '<rect x="80" y="215" width="50" height="160" rx="18" fill="#c4a8e8"/>' +
-    '<rect x="270" y="215" width="50" height="160" rx="18" fill="#c4a8e8"/>' +
-    '<rect x="130" y="450" width="55" height="130" rx="18" fill="#b490de"/>' +
-    '<rect x="215" y="450" width="55" height="130" rx="18" fill="#b490de"/>' +
-    '<text x="200" y="590" text-anchor="middle" fill="#7c5cbf" font-size="13" font-family="sans-serif" font-weight="500">✨ Your Look Preview</text>' +
-    '</svg>'
-  );
+  
 
-  var SKIN_TONES = [
-    { id: 'tone-light', color: '#E8B88A', label: 'Light' },
-    { id: 'tone-medium', color: '#C68642', label: 'Medium' },
-    { id: 'tone-deep', color: '#5C3317', label: 'Deep' }
-  ];
+
 
   function getJurisdiction(country) {
     if (country === 'IL') return 'BIPA';
@@ -71,13 +48,12 @@
     var modelWomanUrl = button.getAttribute('data-tryon-model-woman');
 
     // Generate Shopify asset URL format as fallback
+    var cdnBaseUrl = document.currentScript?.src.split('/cdn/shop/')[0] + '/cdn/shop/';
     if (!modelManUrl) {
-      var cdnUrl = document.currentScript?.src.split('/cdn/shop/')[0] + '/cdn/shop/';
-      modelManUrl = cdnUrl + 'files/model-man.jpg?v=' + Date.now();
+      modelManUrl = cdnBaseUrl + 'files/model-man.jpg?v=' + Date.now();
     }
     if (!modelWomanUrl) {
-      var cdnUrl = document.currentScript?.src.split('/cdn/shop/')[0] + '/cdn/shop/';
-      modelWomanUrl = cdnUrl + 'files/model-woman.jpg?v=' + Date.now();
+      modelWomanUrl = cdnBaseUrl + 'files/model-woman.jpg?v=' + Date.now();
     }
 
     this.modelManUrl = modelManUrl;
@@ -103,7 +79,7 @@
   }
 
   TryOnWidget.prototype.init = function () {
-    var self = this;
+    var self = this, i;
 
     var overlay = document.createElement('div');
     overlay.className = 'tryon-overlay';
@@ -201,7 +177,7 @@
 
     // Gender pills
     var genderBtns = panel.querySelectorAll('[data-tryon-gender]');
-    for (var i = 0; i < genderBtns.length; i++) {
+    for (i = 0; i < genderBtns.length; i++) {
       (function (btn) {
         btn.addEventListener('click', function () {
           var all = panel.querySelectorAll('[data-tryon-gender]');
@@ -215,7 +191,7 @@
 
     // Body type pills
     var bodyBtns = panel.querySelectorAll('[data-tryon-body]');
-    for (var i = 0; i < bodyBtns.length; i++) {
+    for (i = 0; i < bodyBtns.length; i++) {
       (function (btn) {
         btn.addEventListener('click', function () {
           var all = panel.querySelectorAll('[data-tryon-body]');
@@ -229,7 +205,7 @@
 
     // Skin tone swatches
     var toneBtns = panel.querySelectorAll('[data-tryon-tone]');
-    for (var i = 0; i < toneBtns.length; i++) {
+    for (i = 0; i < toneBtns.length; i++) {
       (function (btn) {
         btn.addEventListener('click', function () {
           var all = panel.querySelectorAll('[data-tryon-tone]');
@@ -243,7 +219,7 @@
 
     // Model image selection
     var modelImgBtns = panel.querySelectorAll('[data-tryon-model-image]');
-    for (var i = 0; i < modelImgBtns.length; i++) {
+    for (i = 0; i < modelImgBtns.length; i++) {
       (function (btn) {
         btn.addEventListener('click', function () {
           var all = panel.querySelectorAll('[data-tryon-model-image]');
@@ -257,7 +233,7 @@
 
     // Try again — flush state, back to mode select
     var tryAgainBtns = panel.querySelectorAll('[data-tryon-try-again]');
-    for (var i = 0; i < tryAgainBtns.length; i++) {
+    for (i = 0; i < tryAgainBtns.length; i++) {
       tryAgainBtns[i].addEventListener('click', function () {
         self._reset();
         self.showStep('mode');
@@ -276,7 +252,7 @@
 
     // Back buttons
     var backBtns = panel.querySelectorAll('[data-tryon-back]');
-    for (var i = 0; i < backBtns.length; i++) {
+    for (i = 0; i < backBtns.length; i++) {
       (function (btn) {
         btn.addEventListener('click', function () {
           self.showStep(btn.getAttribute('data-tryon-back'));
@@ -936,7 +912,6 @@
   };
 
   TryOnWidget.prototype._addToCart = function (btn) {
-    var self = this;
 
     // ── Already added: clicking "View Cart" navigates immediately ──────────────
     if (btn.getAttribute('data-cart-done') === 'true') {
