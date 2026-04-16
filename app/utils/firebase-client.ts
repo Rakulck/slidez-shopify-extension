@@ -6,7 +6,14 @@ const FIREBASE_API_BASE_URL = process.env.FIREBASE_API_BASE_URL ?? "";
 const FIREBASE_API_KEY = process.env.FIREBASE_API_KEY ?? "";
 
 export async function firebaseGet(path: string, shop: string) {
-  const url = `${FIREBASE_API_BASE_URL}${path}${path.includes("?") ? "&" : "?"}shop=${encodeURIComponent(shop)}`;
+  if (!FIREBASE_API_BASE_URL) {
+    console.error("CRITICAL: FIREBASE_API_BASE_URL is not defined in your .env file!");
+    throw new Error("Missing Firebase API URL configuration");
+  }
+  
+  const cleanPath = path.startsWith("/") ? path : `/${path}`;
+  const url = `${FIREBASE_API_BASE_URL}${cleanPath}${cleanPath.includes("?") ? "&" : "?"}shop=${encodeURIComponent(shop)}`;
+  
   const res = await fetch(url, {
     headers: {
       Authorization: `Bearer ${FIREBASE_API_KEY}`,
@@ -16,7 +23,11 @@ export async function firebaseGet(path: string, shop: string) {
 }
 
 export async function firebasePost(path: string, body: object) {
-  const res = await fetch(`${FIREBASE_API_BASE_URL}${path}`, {
+  if (!FIREBASE_API_BASE_URL) {
+    throw new Error("Missing Firebase API URL configuration");
+  }
+  const cleanPath = path.startsWith("/") ? path : `/${path}`;
+  const res = await fetch(`${FIREBASE_API_BASE_URL}${cleanPath}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

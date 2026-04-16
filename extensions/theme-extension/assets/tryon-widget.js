@@ -1,6 +1,11 @@
 (function () {
   'use strict';
 
+  // ── Firebase project config ───────────────────────────────────────────────────
+  var FB_PROJECT = 'slidez-be88c';
+  var FB_REGION  = 'us-central1';
+  var FB_CALLABLE_BASE = 'https://' + FB_REGION + '-' + FB_PROJECT + '.cloudfunctions.net';
+
   var PROXY_BASE = '/apps/try-on';
   var MAX_MB = 10;
   var TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic'];
@@ -78,10 +83,16 @@
     this.modelManUrl = modelManUrl;
     this.modelWomanUrl = modelWomanUrl;
 
+    // Product data (passed via Liquid data attributes)
+    this.productImageUrl = button.getAttribute('data-tryon-product-image') || '';
+    this.productTitle    = button.getAttribute('data-tryon-product-title') || 'the selected garment';
+    this.productType     = button.getAttribute('data-tryon-product-type') || '';
+
     // State
     this.mode = null; // 'upload' | 'ai'
     this.file = null;
-    this.aiOptions = { gender: null, bodyType: null, skinTone: null, modelImage: null };
+    this._userImageData = null; // { base64, mimeType } for upload mode
+    this.aiOptions = { gender: null, modelImage: null };
     this.uploadId = null;
     this.resultUrl = null;
     this.consentTimestamp = null;
@@ -183,7 +194,7 @@
 
     // AI generate
     panel.querySelector('[data-tryon-generate]').addEventListener('click', function () {
-      if (self.aiOptions.gender && self.aiOptions.bodyType && self.aiOptions.skinTone) {
+      if (self.aiOptions.gender && self.aiOptions.modelImage) {
         self.process();
       }
     });
@@ -277,7 +288,7 @@
   TryOnWidget.prototype._checkAiReady = function () {
     var btn = this._panel.querySelector('[data-tryon-generate]');
     if (!btn) return;
-    var ready = !!(this.aiOptions.gender && this.aiOptions.bodyType && this.aiOptions.skinTone && this.aiOptions.modelImage);
+    var ready = !!(this.aiOptions.gender && this.aiOptions.modelImage);
     btn.disabled = !ready;
     btn.style.opacity = ready ? '1' : '0.4';
   };
@@ -426,6 +437,7 @@
   };
 
   TryOnWidget.prototype._buildAiModelStep = function () {
+    var self = this; // capture instance for closures below
     var step = document.createElement('div');
     step.className = 'tryon-step tryon-ai-step';
     step.setAttribute('data-step', 'ai');
@@ -444,40 +456,13 @@
     header.appendChild(stepTitle);
     step.appendChild(header);
 
+    // Gender selection only (body type + skin tone removed — handled by AI)
     step.appendChild(this._buildSelectorGroup('Gender', [
       { label: '\u2640 Female', value: 'female', attr: 'data-tryon-gender' },
       { label: '\u2642 Male',   value: 'male',   attr: 'data-tryon-gender' }
     ]));
 
-    step.appendChild(this._buildSelectorGroup('Body Type', [
-      { label: 'Slim',    value: 'slim',    attr: 'data-tryon-body' },
-      { label: 'Average', value: 'average', attr: 'data-tryon-body' },
-      { label: 'Plus',    value: 'plus',    attr: 'data-tryon-body' }
-    ]));
-
-    // Skin tone swatches
-    var toneSection = document.createElement('div');
-    toneSection.className = 'tryon-selector-group';
-    var toneLabel = document.createElement('div');
-    toneLabel.className = 'tryon-selector-label';
-    toneLabel.textContent = 'Skin Tone';
-    var toneRow = document.createElement('div');
-    toneRow.className = 'tryon-tone-swatches';
-    for (var i = 0; i < SKIN_TONES.length; i++) {
-      var t = SKIN_TONES[i];
-      var swatch = document.createElement('button');
-      swatch.className = 'tryon-tone-swatch';
-      swatch.setAttribute('data-tryon-tone', t.id);
-      swatch.setAttribute('aria-label', t.label);
-      swatch.setAttribute('title', t.label);
-      swatch.style.background = t.color;
-      toneRow.appendChild(swatch);
-    }
-    toneSection.appendChild(toneLabel);
-    toneSection.appendChild(toneRow);
-    step.appendChild(toneSection);
-
-    // AI Model Images section
+    // Model Image selection
     var modelSection = document.createElement('div');
     modelSection.className = 'tryon-selector-group';
     var modelLabel = document.createElement('div');
@@ -490,21 +475,12 @@
     m1.className = 'tryon-model-card-item';
     m1.setAttribute('data-tryon-model-image', 'male');
     var img1 = document.createElement('img');
-    img1.src = self.modelManUrl;
+    img1.src = self.modelManUrl; // fixed: use captured self, not global self
     img1.alt = 'Male Model';
-    img1.onerror = function() {
-      // Fallback: try alternative paths if primary fails
-      var fallbacks = [
-        '/cdn/shop/files/model-man.jpg',
-        'model-man.jpg',
-        self.modelManUrl.replace(/\?.*/, '')
-      ];
-      for (var i = 0; i < fallbacks.length; i++) {
-        if (fallbacks[i] !== img1.src) {
-          img1.src = fallbacks[i];
-          return;
-        }
-      }
+    img1.onerror = function () {
+      // asset_url is the correct path; no valid fallback exists
+      img1.style.display = 'none';
+      img1.parentElement.style.background = '#f0f0f0';
     };
     m1.appendChild(img1);
 
@@ -512,21 +488,12 @@
     m2.className = 'tryon-model-card-item';
     m2.setAttribute('data-tryon-model-image', 'female');
     var img2 = document.createElement('img');
-    img2.src = self.modelWomanUrl;
+    img2.src = self.modelWomanUrl; // fixed: use captured self, not global self
     img2.alt = 'Female Model';
-    img2.onerror = function() {
-      // Fallback: try alternative paths if primary fails
-      var fallbacks = [
-        '/cdn/shop/files/model-woman.jpg',
-        'model-woman.jpg',
-        self.modelWomanUrl.replace(/\?.*/, '')
-      ];
-      for (var i = 0; i < fallbacks.length; i++) {
-        if (fallbacks[i] !== img2.src) {
-          img2.src = fallbacks[i];
-          return;
-        }
-      }
+    img2.onerror = function () {
+      // asset_url is the correct path; no valid fallback exists
+      img2.style.display = 'none';
+      img2.parentElement.style.background = '#f0f0f0';
     };
     m2.appendChild(img2);
 
@@ -693,7 +660,8 @@
   TryOnWidget.prototype._reset = function () {
     this.mode = null;
     this.file = null;
-    this.aiOptions = { gender: null, bodyType: null, skinTone: null, modelImage: null };
+    this._userImageData = null;
+    this.aiOptions = { gender: null, modelImage: null };
     this.uploadId = null;
     this.resultUrl = null;
     this.consentTimestamp = null;
@@ -762,76 +730,141 @@
     var submit = this._panel.querySelector('[data-tryon-submit]');
     if (submit) { submit.disabled = false; submit.style.opacity = '1'; }
   };
-
   TryOnWidget.prototype.process = function () {
-    var self = this;
     this.showStep('loading');
     this.updateLoadingText('Styling your look\u2026');
     this.startProgress();
-
-    // Text swap at 1.5 s so the wait feels active
-    setTimeout(function () {
-      self.updateLoadingText('Fitting the outfit to you\u2026');
-    }, 1500);
-
-    // ── Mock resolution (2.5 s) ──────────────────────────────────────────────
-    // Remove this setTimeout block and uncomment _processReal() below once
-    // the Firebase / AI backend is wired up.
-    setTimeout(function () {
-      self.resultUrl = MOCK_RESULT;
-      self.showResult(MOCK_RESULT);
-    }, 2500);
-
-    // ── Real API (uncomment when backend is ready) ───────────────────────────
-    // self._processReal();
+    if (this.mode === 'upload') {
+      this._processUpload();
+    } else {
+      this._processAiModel();
+    }
   };
 
-  TryOnWidget.prototype._processReal = function () {
+  // ── Upload mode: convert photo then call singleItemTryOn directly ─────────────
+  TryOnWidget.prototype._processUpload = function () {
     var self = this;
-    fetch(PROXY_BASE + '?action=presign', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ shop: self.shop, productId: self.productId })
-    })
-      .then(function (res) {
-        if (!res.ok) throw new Error('Presign failed (' + res.status + ')');
-        return res.json();
-      })
-      .then(function (data) {
-        self.uploadId = data.uploadId;
-        self.updateLoadingText('Uploading your photo\u2026');
-        return fetch(data.presignedUrl, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'image/jpeg' },
-          body: self.file
-        });
-      })
-      .then(function (res) {
-        if (!res.ok) throw new Error('Upload failed (' + res.status + ')');
+    console.log('[TryOn] _processUpload | productImageUrl=', self.productImageUrl);
+
+    if (!self.productImageUrl) {
+      self.showError('This product has no image. Cannot generate a try-on.');
+      return;
+    }
+
+    var timeoutId = null;
+    var timeoutPromise = new Promise(function (_, reject) {
+      timeoutId = setTimeout(function () {
+        reject(new Error('Request timed out after 2 minutes. Gemini may be busy — please try again.'));
+      }, 120000);
+    });
+
+    self.updateLoadingText('Preparing your photo\u2026');
+
+    var mainFlow = Promise.all([
+      fileToBase64(self.file),
+      imageUrlToBase64(self.productImageUrl)
+    ])
+      .then(function (results) {
+        var userImg    = results[0];
+        var productImg = results[1];
+        self._userImageData = userImg;
+        console.log('[TryOn] images ready | userMime=', userImg.mimeType, '| productMime=', productImg.mimeType);
         self.updateLoadingText('Applying your outfit\u2026');
-        return fetch(PROXY_BASE + '?action=process', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            uploadId: self.uploadId,
-            productId: self.productId,
-            shop: self.shop,
-            mode: self.mode,
-            aiOptions: self.aiOptions,
-            consentTimestamp: self.consentTimestamp,
-            jurisdiction: self.jurisdiction
-          })
+        return callFirebaseFunction('singleItemTryOn', {
+          tryOnType: 'garment',
+          userImageBase64: userImg.base64,
+          userMimeType: userImg.mimeType,
+          referenceImageBase64: productImg.base64,
+          referenceMimeType: productImg.mimeType,
+          garmentDescription: self.productTitle,
+          category: self.productType,
+          garmentImageContainsPerson: false,
+          platform: 'shopify_extension',
+          device: /Android|iPhone|iPad/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
+          shopDomain: self.shop || '',
+          productId: self.productId || '',
+          productTitle: self.productTitle || '',
+          productImageUrl: self.productImageUrl || ''
         });
       })
-      .then(function (res) {
-        if (!res.ok) throw new Error('Processing failed (' + res.status + ')');
-        return res.json();
-      })
-      .then(function (data) {
-        self.resultUrl = data.resultUrl;
-        self.showResult(data.resultUrl);
-      })
+      .then(function (result) {
+        clearTimeout(timeoutId);
+        console.log('[TryOn] singleItemTryOn success | mimeType=', result.mimeType);
+        var dataUrl = 'data:' + result.mimeType + ';base64,' + result.imageBase64;
+        self.resultUrl = dataUrl;
+        self.showResult(dataUrl);
+      });
+
+    Promise.race([mainFlow, timeoutPromise])
       .catch(function (err) {
+        clearTimeout(timeoutId);
+        console.error('[TryOn] _processUpload error:', err);
+        self.showError(err.message || 'An unexpected error occurred.');
+      });
+  };
+
+  // ── AI model mode: use selected model image + product image ───────────────────
+  TryOnWidget.prototype._processAiModel = function () {
+    var self = this;
+    var modelUrl = self.aiOptions.modelImage === 'male' ? self.modelManUrl : self.modelWomanUrl;
+    console.log('[TryOn] _processAiModel | modelImage=', self.aiOptions.modelImage, '| modelUrl=', modelUrl, '| productImageUrl=', self.productImageUrl, '| productTitle=', self.productTitle);
+
+    if (!self.productImageUrl) {
+      self.showError('This product has no image. Cannot generate a try-on.');
+      return;
+    }
+    if (!modelUrl) {
+      self.showError('Model image not available. Please refresh and try again.');
+      return;
+    }
+
+    var timeoutId = null;
+    var timeoutPromise = new Promise(function (_, reject) {
+      timeoutId = setTimeout(function () {
+        reject(new Error('Request timed out after 2 minutes. Gemini may be busy — please try again.'));
+      }, 120000);
+    });
+
+    self.updateLoadingText('Loading images\u2026');
+
+    var mainFlow = Promise.all([
+      imageUrlToBase64(modelUrl),
+      imageUrlToBase64(self.productImageUrl)
+    ])
+      .then(function (results) {
+        var modelImg   = results[0];
+        var productImg = results[1];
+        console.log('[TryOn] images converted | modelMime=', modelImg.mimeType, '| productMime=', productImg.mimeType, '| modelB64Len=', modelImg.base64.length, '| productB64Len=', productImg.base64.length);
+        self.updateLoadingText('Generating your look with AI\u2026');
+        return callFirebaseFunction('singleItemTryOn', {
+          tryOnType: 'garment',
+          userImageBase64: modelImg.base64,
+          userMimeType: modelImg.mimeType,
+          referenceImageBase64: productImg.base64,
+          referenceMimeType: productImg.mimeType,
+          garmentDescription: self.productTitle,
+          category: self.productType,
+          garmentImageContainsPerson: false,
+          platform: 'shopify_extension',
+          device: /Android|iPhone|iPad/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
+          shopDomain: self.shop || '',
+          productId: self.productId || '',
+          productTitle: self.productTitle || '',
+          productImageUrl: self.productImageUrl || ''
+        });
+      })
+      .then(function (result) {
+        clearTimeout(timeoutId);
+        console.log('[TryOn] singleItemTryOn success | mimeType=', result.mimeType);
+        var dataUrl = 'data:' + result.mimeType + ';base64,' + result.imageBase64;
+        self.resultUrl = dataUrl;
+        self.showResult(dataUrl);
+      });
+
+    Promise.race([mainFlow, timeoutPromise])
+      .catch(function (err) {
+        clearTimeout(timeoutId);
+        console.error('[TryOn] _processAiModel error:', err);
         self.showError(err.message || 'An unexpected error occurred.');
       });
   };
@@ -903,37 +936,147 @@
   };
 
   TryOnWidget.prototype._addToCart = function (btn) {
-    // Grab whichever variant is currently selected on the product page
-    var variantInput = document.querySelector('input[name="id"], select[name="id"]');
+    var self = this;
+
+    // ── Already added: clicking "View Cart" navigates immediately ──────────────
+    if (btn.getAttribute('data-cart-done') === 'true') {
+      window.location.href = '/cart';
+      return;
+    }
+
+    // ── Find the selected variant ID ──────────────────────────────────────────
+    // Cover all major Shopify themes: Dawn, Debut, Sense, Craft, etc.
+    var variantInput =
+      document.querySelector('form[action*="/cart/add"] input[name="id"]') ||
+      document.querySelector('form[action="/cart/add"] input[name="id"]') ||
+      document.querySelector('select[name="id"]') ||
+      document.querySelector('input[name="id"]');
+
     var variantId = variantInput ? variantInput.value : null;
 
+    // ── No variant found: go straight to cart ─────────────────────────────────
     if (!variantId) {
-      btn.textContent = 'View Product Page';
+      window.location.href = '/cart';
       return;
     }
 
     var original = btn.textContent;
-    btn.textContent = 'Adding\u2026';
+    btn.textContent = 'Adding to cart…';
     btn.disabled = true;
+    btn.style.transition = 'background 300ms ease';
 
+    // ── POST to Shopify AJAX Cart API ─────────────────────────────────────────
     fetch('/cart/add.js', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: variantId, quantity: 1 })
+      body: JSON.stringify({ id: parseInt(variantId, 10), quantity: 1 })
     })
       .then(function (res) {
-        if (!res.ok) throw new Error('cart');
-        btn.textContent = '\u2713 Added!';
+        if (!res.ok) return res.json().then(function (e) { throw new Error(e.description || 'Add to cart failed'); });
+        return res.json();
+      })
+      .then(function () {
+        // ── Success: green ✔ Added! ──────────────────────────────────────────
+        btn.textContent = '✔ Added!';
+        btn.style.background = '#16a34a';
+        btn.disabled = false;
+        btn.setAttribute('data-cart-done', 'true'); // mark so next click navigates
+        console.log('[TryOn] Product added to cart | variantId:', variantId);
+
+        // ── Update the cart count / trigger the cart drawer ───────────────────
+        fetch('/cart.js')
+          .then(function (r) { return r.json(); })
+          .then(function (cart) {
+            var bubbles = document.querySelectorAll(
+              '.cart-count-bubble span[aria-hidden], '
+              + '#cart-count, .cart__count, [data-cart-count], '
+              + '.header__cart-count, .icon-cart__bubble'
+            );
+            for (var i = 0; i < bubbles.length; i++) {
+              bubbles[i].textContent = cart.item_count;
+            }
+            document.dispatchEvent(new CustomEvent('cart:refresh', { bubbles: true, detail: { source: 'slidez-tryon' } }));
+            var cartDrawer = document.querySelector('cart-drawer');
+            if (cartDrawer && typeof cartDrawer.open === 'function') {
+              cartDrawer.open();
+            } else {
+              var cartToggle = document.querySelector('[data-cart-toggle]:not(.tryon-btn-primary), #cart-icon-bubble, .js-cart-toggle');
+              if (cartToggle) cartToggle.click();
+            }
+          })
+          .catch(function () {});
+
+        // ── After 2 s flip to "View Cart" ─────────────────────────────────────
         setTimeout(function () {
-          btn.textContent = original;
-          btn.disabled = false;
+          btn.textContent = '🛒 View Cart';
+          btn.style.background = '';
+          // clicking "View Cart" will hit the data-cart-done guard above → /cart
         }, 2000);
       })
-      .catch(function () {
-        btn.textContent = 'Try Again';
+      .catch(function (err) {
+        console.error('[TryOn] Add to cart error:', err);
+        btn.textContent = '⚠️ ' + (err.message || 'Try Again');
+        btn.style.background = '';
         btn.disabled = false;
+        setTimeout(function () {
+          btn.textContent = original;
+        }, 3000);
       });
   };
+
+  // ── Firebase callable helper ─────────────────────────────────────────────────
+  function callFirebaseFunction(fnName, data) {
+    var url = FB_CALLABLE_BASE + '/' + fnName;
+    console.log('[TryOn] calling Firebase function:', fnName, '| url:', url);
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: data })
+    })
+      .then(function (res) {
+        console.log('[TryOn]', fnName, 'HTTP status:', res.status);
+        return res.json();
+      })
+      .then(function (json) {
+        console.log('[TryOn]', fnName, 'response keys:', Object.keys(json));
+        if (json.error) {
+          var msg = (json.error.message || json.error.status || JSON.stringify(json.error));
+          console.error('[TryOn]', fnName, 'Firebase error:', msg);
+          throw new Error(msg);
+        }
+        return json.result;
+      });
+  }
+
+  // ── Image URL → { base64, mimeType } ─────────────────────────────────────────
+  function imageUrlToBase64(url) {
+    return fetch(url)
+      .then(function (r) { return r.blob(); })
+      .then(function (blob) {
+        return new Promise(function (resolve, reject) {
+          var reader = new FileReader();
+          reader.onload = function () {
+            var parts = reader.result.split(',');
+            resolve({ base64: parts[1], mimeType: blob.type || 'image/jpeg' });
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      });
+  }
+
+  // ── File → { base64, mimeType } ──────────────────────────────────────────────
+  function fileToBase64(file) {
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function () {
+        var parts = reader.result.split(',');
+        resolve({ base64: parts[1], mimeType: file.type || 'image/jpeg' });
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
 
   // ── Bootstrap ────────────────────────────────────────────────────────────────
   document.querySelectorAll('[data-tryon-product-id]').forEach(function (btn) {

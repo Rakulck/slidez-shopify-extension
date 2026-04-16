@@ -46,6 +46,7 @@ interface AnalyticsData {
     mobile: number;
     desktop: number;
   };
+  activeProductsCount: number;
   topProducts: TopProduct[];
   monthlyUsage: Array<{ month: string; count: number }>;
   bestDays: BestDay[];
@@ -97,49 +98,35 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   //   return json<LoaderData>({ paywalled: true, range });
   // }
 
-  // Fetch analytics data
+  // Fetch analytics data from Firebase
   let analytics: Record<string, unknown> = {};
   try {
-    analytics = await firebaseGet(`/api/analytics?range=${range}`, shop);
-  } catch {
-    // Firebase error
+    analytics = await firebaseGet(`/analytics?range=${range}`, shop);
+    console.log("DEBUG: Analytics data received for", shop, ":", analytics);
+  } catch (err: any) {
+    console.error("DEBUG: Failed to reach Analytics API:", err.message);
   }
 
-  const totalTryOnsThisMonth = (analytics as any)?.totalTryOnsThisMonth ?? 0;
-  const monthlyUsage = (analytics as any)?.monthlyUsage ?? [];
+  const loaderData = analytics as AnalyticsData;
+  const totalTryOnsThisMonth = loaderData.totalTryOnsThisMonth;
+  const totalTryOnsPrevMonth = loaderData.totalTryOnsPrevMonth;
+  const monthlyUsage = loaderData.monthlyUsage;
+  const topProductsRaw = loaderData.topProducts;
+  const activeProductsCount = loaderData.activeProductsCount;
+  const bestDays = loaderData.bestDays;
+  const deviceSplit = loaderData.deviceSplit;
 
-  // TEMP: Bypass empty state and provide mock data for design testing
+  // Show empty state when there is genuinely no data yet
   if (totalTryOnsThisMonth === 0 && monthlyUsage.length === 0) {
-    const mockAnalytics: AnalyticsData = {
-      totalTryOnsThisMonth: 1245,
-      totalTryOnsPrevMonth: 890,
-      cartAddRate: 0.15,
-      cartAddRatePrevPeriod: 0.12,
-      deviceSplit: { mobile: 0.75, desktop: 0.25 },
-      topProducts: [
-        { productId: "1", count: 450, title: "Classic White T-Shirt" },
-        { productId: "2", count: 320, title: "Denim Jacket" },
-        { productId: "3", count: 150, title: "Summer Dress" }
-      ],
-      monthlyUsage: [
-        { month: "Jan", count: 400 },
-        { month: "Feb", count: 650 },
-        { month: "Mar", count: 890 },
-        { month: "Apr", count: 1245 }
-      ],
-      bestDays: [
-        { day: "Saturday", count: 350 },
-        { day: "Sunday", count: 420 },
-        { day: "Friday", count: 280 }
-      ]
-    };
-    return json<LoaderData>({ paywalled: false, empty: false, range, analytics: mockAnalytics });
+    return json<LoaderData>({ paywalled: false, empty: true, range });
   }
 
   // Enrich topProducts with Shopify data
-  const topProductIds = ((analytics as any)?.topProducts ?? []).map(
-    (p: any) => p.productId,
-  );
+  const topProductIds = ((analytics as any)?.topProducts ?? [])
+    .map((p: any) => {
+      const pid = String(p.productId);
+      return pid.startsWith("gid://") ? pid : `gid://shopify/Product/${pid}`;
+    });
 
   let enrichedProducts: TopProduct[] = ((analytics as any)?.topProducts ?? []);
 
@@ -159,13 +146,21 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         }
       });
 
-      enrichedProducts = enrichedProducts.map((p) => ({
-        ...p,
-        title: shopifyProducts[p.productId]?.title ?? "Deleted product",
-        featuredImage: shopifyProducts[p.productId]?.featuredImage ?? null,
-      }));
-    } catch {
+      enrichedProducts = enrichedProducts.map((p) => {
+        const gid = String(p.productId).startsWith("gid://") 
+          ? String(p.productId) 
+          : `gid://shopify/Product/${p.productId}`;
+          
+        return {
+          ...p,
+          title: shopifyProducts[gid]?.title ?? "Deleted product",
+          featuredImage: shopifyProducts[gid]?.featuredImage ?? null,
+        };
+      });
+    } catch (err: unknown) {
       // GraphQL error — still return the products with limited info
+      const errorMessage = err instanceof Error ? err.message : "Unknown error";
+      console.error("DEBUG: GraphQL product enrichment failed:", errorMessage);
       enrichedProducts = enrichedProducts.map((p) => ({
         ...p,
         title: p.title ?? "Unknown product",
@@ -308,21 +303,11 @@ export default function Analytics() {
             trendTone={tryOnTrend?.tone}
           />
 
-          {/* Try-on → Add to Cart */}
+          {/* Active Products */}
           <StatCard
-            title="Try-on → Add to Cart"
-            value={
-              analytics.cartAddRate !== null
-                ? `${Math.round(analytics.cartAddRate * 100)}%`
-                : "N/A"
-            }
-            trend={cartTrend?.trend}
-            trendTone={cartTrend?.tone}
-            footnote={
-              analytics.cartAddRate === null
-                ? "Not supported on your theme"
-                : "Tracked on supported themes only"
-            }
+            title="Active Products"
+            value={analytics.activeProductsCount}
+            footnote="Unique products tried on this period"
           />
 
           {/* Mobile vs Desktop */}

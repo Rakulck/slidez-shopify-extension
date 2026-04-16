@@ -24,6 +24,7 @@ import {
 import { TitleBar, useAppBridge } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
+import { firebaseGet, firebasePost } from "../utils/firebase-client";
 import { WidgetPreview } from "../components/WidgetPreview";
 
 function hexToHsb(hex: string): HSBAColor {
@@ -53,14 +54,61 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const shop = session.shop;
 
   const config = await prisma.merchantConfig.findUnique({ where: { shop } });
+  
+  // Fetch Slidez Account info from Firestore
+  let merchantInfo = { slidez_uid: "" };
+  try {
+    const data = await firebaseGet("/details", shop);
+    console.log("DEBUG: Fetched merchant data for", shop, ":", data);
+    if (data && (data.slidez_uid || data.slidezUserId)) {
+      merchantInfo.slidez_uid = data.slidez_uid || data.slidezUserId;
+    }
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    console.error("DEBUG: Failed to reach Firebase /details API:", msg);
+  }
 
-  return json({ config, shop });
+  return json({
+    config,
+    slidezUserId: merchantInfo.slidez_uid,
+    shop 
+  });
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   const { session } = await authenticate.admin(request);
   const shop = session.shop;
   const formData = await request.formData();
+  const slidezUserId = String(formData.get("slidezUserId") ?? "");
+  const intent = formData.get("intent");
+
+  let firebaseResult = null;
+  // Link merchant in Firestore
+  if (slidezUserId) {
+    try {
+      firebaseResult = await firebasePost("/linkMerchant", { shop, slidezUserId });
+      console.log("DEBUG: linkMerchant result:", firebaseResult);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      console.error("DEBUG: Failed to reach Firebase /linkMerchant:", msg);
+      firebaseResult = { error: msg };
+    }
+  }
+
+  // If this was just an account link, return the firebase result to the UI
+  if (intent === "link_account") {
+    return json({ success: true, firebaseResult });
+  }
+
+  // Handle Unlinking
+  if (intent === "unlink_account") {
+    try {
+      await firebasePost("/linkMerchant", { shop, slidezUserId: "" }); // Clear the ID
+      return json({ success: true, unlinked: true });
+    } catch (err) {
+      return json({ success: false, error: "Failed to unlink" });
+    }
+  }
 
   await prisma.merchantConfig.upsert({
     where: { shop },
@@ -93,7 +141,7 @@ const POSITION_OPTIONS = [
 ];
 
 export default function Settings() {
-  const { config } = useLoaderData<typeof loader>();
+  const { config, slidezUserId: initialSlidezUserId } = useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
   const shopify = useAppBridge();
 
@@ -105,10 +153,68 @@ export default function Settings() {
   const [borderRadius, setBorderRadius] = useState(config?.borderRadius ?? 8);
   const [fullWidth, setFullWidth] = useState(config?.fullWidth ?? true);
   const [showWatermark, setShowWatermark] = useState(config?.showWatermark ?? true);
+  const [slidezUserId, setSlidezUserId] = useState(initialSlidezUserId ?? "");
   const [colorHsb, setColorHsb] = useState<HSBAColor>(() =>
     hexToHsb(config?.buttonColor ?? "#000000"),
   );
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const [slidezEmail, setSlidezEmail] = useState("");
+  const [slidezPassword, setSlidezPassword] = useState("");
+  const [loginError, setLoginError] = useState(false);
+
+  // ── Firebase Auth Login ──────────────────────────────────────────────────
+  const handleConnect = async () => {
+    setLoginError(false);
+    if (!slidezEmail || !slidezPassword) {
+      shopify.toast.show("Please enter both email and password", { isError: true });
+      return;
+    }
+
+    // We load Firebase from CDN to avoid needing local npm installs
+    const module = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js");
+    const authModule = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js");
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBmbOoNdL0ikJ_o3gqO_yu_U78CwD7UwUI",
+      authDomain: "slidez-be88c.firebaseapp.com",
+      projectId: "slidez-be88c",
+    };
+
+    const app = module.initializeApp(firebaseConfig);
+    const auth = authModule.getAuth(app);
+
+    try {
+      const result = await authModule.signInWithEmailAndPassword(auth, slidezEmail, slidezPassword);
+      const user = result.user;
+      setSlidezUserId(user.uid);
+      setSlidezEmail("");
+      setSlidezPassword("");
+      
+      // Auto-save ONLY the connection immediately after login
+      fetcher.submit(
+        {
+          intent: "link_account",
+          slidezUserId: user.uid,
+        },
+        { method: "post" }
+      );
+
+      shopify.toast.show("Account linked and saved!");
+    } catch (error: any) {
+      console.error("Login failed:", error);
+      setLoginError(true);
+      shopify.toast.show("Login failed: " + error.message, { isError: true });
+    }
+  };
+
+  const handleDisconnect = () => {
+    setSlidezUserId("");
+    fetcher.submit(
+      { intent: "unlink_account" },
+      { method: "post" }
+    );
+    shopify.toast.show("Account signed out");
+  };
 
   const isSaving = fetcher.state !== "idle";
 
@@ -126,6 +232,7 @@ export default function Settings() {
         borderRadius: String(borderRadius),
         fullWidth: String(fullWidth),
         showWatermark: String(showWatermark),
+        slidezUserId: slidezUserId,
       },
       { method: "post" },
     );
@@ -150,6 +257,66 @@ export default function Settings() {
         {/* ── Left: Settings form ── */}
         <Layout.Section>
           <BlockStack gap="500">
+            {/* Account Connection */}
+            <Card>
+              <BlockStack gap="400">
+                <Text as="h2" variant="headingMd">
+                  Slidez Account Connection
+                </Text>
+                
+                {slidezUserId ? (
+                  // CONNECTED VIEW
+                  <BlockStack gap="300">
+                    <Text as="p" tone="subdued">
+                      Your Shopify store is securely linked to your Slidez account.
+                    </Text>
+                    <InlineStack gap="300" blockAlign="center">
+                      <Badge tone="success">
+                        Connected (ID: {slidezUserId.substring(0, 6)}...{slidezUserId.substring(slidezUserId.length - 4)})
+                      </Badge>
+                      <Button variant="secondary" tone="critical" onClick={handleDisconnect}>
+                        Sign Out
+                      </Button>
+                    </InlineStack>
+                  </BlockStack>
+                ) : (
+                  // LOGIN VIEW
+                  <BlockStack gap="300">
+                    <Text as="p" tone="subdued">
+                      Log in to your Slidez account to unlock analytics and sync your store settings.
+                    </Text>
+                    <TextField
+                      label="Email"
+                      type="email"
+                      value={slidezEmail}
+                      onChange={(v) => { setSlidezEmail(v); setLoginError(false); }}
+                      autoComplete="email"
+                      placeholder="your@email.com"
+                      error={loginError}
+                    />
+                    <TextField
+                      label="Password"
+                      type="password"
+                      value={slidezPassword}
+                      onChange={(v) => { setSlidezPassword(v); setLoginError(false); }}
+                      autoComplete="current-password"
+                      error={loginError ? "Check your credentials" : false}
+                    />
+                    
+                    <InlineStack gap="300" blockAlign="center">
+                      <Button
+                        variant="primary"
+                        onClick={handleConnect}
+                        loading={fetcher.state !== "idle"}
+                      >
+                        Connect Account
+                      </Button>
+                      <Badge tone="attention">Not Connected</Badge>
+                    </InlineStack>
+                  </BlockStack>
+                )}
+              </BlockStack>
+            </Card>
 
             {/* Button Appearance */}
             <Card>

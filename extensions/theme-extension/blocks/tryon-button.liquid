@@ -7,8 +7,11 @@
   data-tryon-shop="{{ shop.permanent_domain }}"
   data-tryon-color="{{ block.settings.button_color }}"
   data-tryon-country="{{ localization.country.iso_code }}"
-  data-tryon-model-man="/cdn/shop/files/model-man.jpg"
-  data-tryon-model-woman="/cdn/shop/files/model-woman.jpg"
+  data-tryon-model-man="{{ 'model-man.jpg' | asset_url }}"
+  data-tryon-model-woman="{{ 'model-woman.jpg' | asset_url }}"
+  data-tryon-product-image="{{ product.featured_image | image_url: width: 1024 }}"
+  data-tryon-product-title="{{ product.title | escape }}"
+  data-tryon-product-type="{{ product.type | escape }}"
   style="
     display: none;
     --tryon-color: {{ block.settings.button_color }};

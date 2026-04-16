@@ -374,6 +374,68 @@
   box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.85), 0 3px 10px rgba(0, 0, 0, 0.22);
 }
 
+/* ── Model image cards ── */
+.tryon-model-cards {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.tryon-model-card-item {
+  position: relative;
+  width: 110px;
+  height: 148px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 2.5px solid #e5e7eb;
+  cursor: pointer;
+  flex-shrink: 0;
+  background: #f3f4f6;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.tryon-model-card-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  display: block;
+  pointer-events: none;
+}
+.tryon-model-card-item:hover {
+  border-color: var(--tryon-color, #000);
+  transform: scale(1.04);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+}
+.tryon-model-card-item.selected {
+  border-color: var(--tryon-color, #000);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--tryon-color, #000) 20%, transparent),
+              0 6px 18px rgba(0, 0, 0, 0.12);
+  transform: scale(1.04);
+}
+/* Checkmark badge on selected */
+.tryon-model-card-item.selected::after {
+  content: '✓';
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--tryon-color, #000);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 22px;
+  text-align: center;
+}
+
+
 /* ── Step: Loading ── */
 .tryon-loading-step {
   align-items: center;
