@@ -21,30 +21,16 @@ export default function App() {
 
   return (
     <div className={styles.index}>
-      {/* Background decorations */}
-      <div className={styles.blob1}></div>
-      <div className={styles.blob2}></div>
-      
       <div className={styles.content}>
         <div className={styles.logo}>
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-             <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="url(#paint0_linear)"/>
-             <path d="M2 17L12 22L22 17M2 12L12 17L22 12" stroke="url(#paint0_linear)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-             <defs>
-               <linearGradient id="paint0_linear" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
-                 <stop stopColor="#6366f1"/>
-                 <stop offset="1" stopColor="#a855f7"/>
-               </linearGradient>
-             </defs>
-          </svg>
           Slidez
         </div>
-        <h1 className={styles.heading}>AI Virtual Try-On<br/><span className={styles.gradientText}>for Shopify</span></h1>
+        <h1 className={styles.heading}>AI Virtual Try-On<br/>for Shopify</h1>
         <p className={styles.text}>
           Let shoppers try clothes, accessories, and makeup before buying —
           boost conversions and reduce returns with AI-powered try-on.
         </p>
-        
+
         {showForm && (
           <div className={styles.formWrapper}>
             <Form className={styles.form} method="post" action="/auth/login">
@@ -59,7 +45,7 @@ export default function App() {
             </Form>
           </div>
         )}
-        
+
         <ul className={styles.list}>
           <li className={styles.card}>
             <div className={styles.cardIcon}>✨</div>
