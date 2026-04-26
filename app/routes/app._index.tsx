@@ -16,6 +16,7 @@ import { CheckCircleIcon, MinusCircleIcon } from "@shopify/polaris-icons";
 import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 import { firebaseGet } from "../utils/firebase-client";
+import prisma from "../db.server";
 import { StatCard } from "../components/StatCard";
 import { PlanBadge } from "../components/PlanBadge";
 
@@ -35,17 +36,20 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     // Firebase not connected yet — show empty states
   }
 
-  return json({ config, analytics, shop });
+  const enabledCount = await prisma.productState.count({
+    where: { shop, enabled: true },
+  });
+
+  return json({ config, analytics, shop, enabledCount });
 };
 
 export default function Dashboard() {
-  const { config, analytics } = useLoaderData<typeof loader>();
+  const { config, analytics, enabledCount } = useLoaderData<typeof loader>();
   const navigate = useNavigate();
 
   const monthlyUsage =
     (analytics as any)?.monthlyUsage?.[0]?.count ?? 0;
-  const activeProducts =
-    (analytics as any)?.topProducts?.length ?? 0;
+  const activeProducts = enabledCount;
   const planId = (config as any)?.planId ?? "free";
   const buttonText = (config as any)?.buttonText ?? "";
   const hasActiveProducts = activeProducts > 0;
@@ -87,13 +91,9 @@ export default function Dashboard() {
                 <Text as="h2" variant="headingMd">
                   Setup checklist
                 </Text>
-                <BlockStack gap="300">
+                <BlockStack gap="400">
                   {checklistItems.map((item) => (
-                    <InlineStack key={item.label} gap="300" blockAlign="center">
-                      <Icon
-                        source={item.done ? CheckCircleIcon : MinusCircleIcon}
-                        tone={item.done ? "success" : "subdued"}
-                      />
+                    <InlineStack key={item.label} gap="400" blockAlign="center" align="space-between">
                       <Text
                         as="span"
                         variant="bodyMd"
@@ -101,6 +101,12 @@ export default function Dashboard() {
                       >
                         {item.label}
                       </Text>
+                      <div style={{ width: 24 }}>
+                        <Icon
+                          source={item.done ? CheckCircleIcon : MinusCircleIcon}
+                          tone={item.done ? "success" : "subdued"}
+                        />
+                      </div>
                     </InlineStack>
                   ))}
                 </BlockStack>

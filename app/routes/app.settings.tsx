@@ -14,7 +14,6 @@ import {
   Button,
   Text,
   ColorPicker,
-  RangeSlider,
   hsbToHex,
   hexToRgb,
   Divider,
@@ -137,7 +136,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 const POSITION_OPTIONS = [
   { label: "Below Add to Cart", value: "below-add-to-cart" },
   { label: "Above Add to Cart", value: "above-add-to-cart" },
-  { label: "Floating Corner Button", value: "floating-corner" },
 ];
 
 export default function Settings() {
@@ -148,10 +146,9 @@ export default function Settings() {
   const [buttonText, setButtonText] = useState(config?.buttonText ?? "Try It On");
   const [buttonColor, setButtonColor] = useState(config?.buttonColor ?? "#000000");
   const [buttonPosition, setButtonPosition] = useState<
-    "below-add-to-cart" | "above-add-to-cart" | "floating-corner"
+    "below-add-to-cart" | "above-add-to-cart"
   >((config?.buttonPosition as any) ?? "below-add-to-cart");
-  const [borderRadius, setBorderRadius] = useState(config?.borderRadius ?? 8);
-  const [fullWidth, setFullWidth] = useState(config?.fullWidth ?? true);
+  const [cornerStyle, setCornerStyle] = useState<"square" | "rounded">((config?.borderRadius === 0 ? "square" : "rounded") as "square" | "rounded");
   const [showWatermark, setShowWatermark] = useState(config?.showWatermark ?? true);
   const [slidezUserId, setSlidezUserId] = useState(initialSlidezUserId ?? "");
   const [colorHsb, setColorHsb] = useState<HSBAColor>(() =>
@@ -224,13 +221,14 @@ export default function Settings() {
   }, []);
 
   const handleSave = () => {
+    const borderRadiusValue = cornerStyle === "square" ? 0 : 6;
     fetcher.submit(
       {
         buttonText,
         buttonColor,
         buttonPosition,
-        borderRadius: String(borderRadius),
-        fullWidth: String(fullWidth),
+        borderRadius: String(borderRadiusValue),
+        fullWidth: "true",
         showWatermark: String(showWatermark),
         slidezUserId: slidezUserId,
       },
@@ -371,31 +369,16 @@ export default function Settings() {
                   )}
                 </BlockStack>
 
-                {/* Border radius */}
-                <BlockStack gap="200">
-                  <InlineStack align="space-between">
-                    <Text as="p" variant="bodyMd" fontWeight="medium">
-                      Corner style
-                    </Text>
-                    <Text as="span" variant="bodySm" tone="subdued">
-                      {borderRadiusLabel} ({borderRadius}px)
-                    </Text>
-                  </InlineStack>
-                  <RangeSlider
-                    label="Border radius"
-                    labelHidden
-                    min={0}
-                    max={24}
-                    step={2}
-                    value={borderRadius}
-                    onChange={(v) => setBorderRadius(Number(v))}
-                    output
-                  />
-                  <InlineStack align="space-between">
-                    <Text as="span" variant="bodySm" tone="subdued">Square</Text>
-                    <Text as="span" variant="bodySm" tone="subdued">Pill</Text>
-                  </InlineStack>
-                </BlockStack>
+                {/* Corner style */}
+                <Select
+                  label="Corner style"
+                  options={[
+                    { label: "Square", value: "square" },
+                    { label: "Rounded", value: "rounded" },
+                  ]}
+                  value={cornerStyle}
+                  onChange={(v) => setCornerStyle(v as "square" | "rounded")}
+                />
               </BlockStack>
             </Card>
 
@@ -412,15 +395,6 @@ export default function Settings() {
                   value={buttonPosition}
                   onChange={(v) => setButtonPosition(v as typeof buttonPosition)}
                   helpText="Where the try-on button appears relative to Add to Cart."
-                />
-
-                <Divider />
-
-                <Checkbox
-                  label="Match Add to Cart width"
-                  helpText="Button stretches to the same width as your Add to Cart button."
-                  checked={fullWidth}
-                  onChange={setFullWidth}
                 />
               </BlockStack>
             </Card>
@@ -456,7 +430,7 @@ export default function Settings() {
 
         {/* ── Right: Live preview ── */}
         <Layout.Section variant="oneThird">
-          <div style={{ position: "sticky", top: 16 }}>
+          <div style={{ position: "sticky", top: 16, marginTop: -160 }}>
             <Card>
               <BlockStack gap="300">
                 <InlineStack align="space-between" blockAlign="center">
@@ -472,8 +446,8 @@ export default function Settings() {
                   buttonText={buttonText}
                   buttonColor={buttonColor}
                   buttonPosition={buttonPosition}
-                  borderRadius={borderRadius}
-                  fullWidth={fullWidth}
+                  borderRadius={cornerStyle === "square" ? 0 : 6}
+                  fullWidth={true}
                 />
                 <Divider />
                 <Text as="p" variant="bodySm" tone="subdued">

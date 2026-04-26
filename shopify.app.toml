@@ -1,8 +1,8 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "72f82a63b0e306e2138f3fcc90cdd779"
-name = "virtual-tryon-app"
-application_url = "https://example.com"
+name = "Slidez AI Try-On for Shopify"
+application_url = "https://YOUR_PRODUCTION_URL" # Replace with deployed URL
 embedded = true
 
 [build]
@@ -20,12 +20,21 @@ api_version = "2026-07"
   uri = "/webhooks/app/scopes_update"
 
 [access_scopes]
-scopes = "read_products"
+scopes = "read_products,write_products,read_analytics,read_store,read_orders"
 
 [auth]
-redirect_urls = [ "https://example.com/api/auth" ]
+redirect_urls = [ "https://YOUR_PRODUCTION_URL/api/auth" ]
 
 [app_proxy]
-url = "https://example.com/api/product-check"
+url = "https://YOUR_PRODUCTION_URL/api/product-check"
 subpath = "try-on"
 prefix = "apps"
+
+# ── Partner Dashboard fields (enter these at partners.shopify.com, not here) ──
+# Name:          Slidez AI Try-On for Shopify
+# Tagline:       Boost sales with AI virtual try-on
+# Description:   Increase sales with AI virtual try-on. Let shoppers try clothes, makeup, and accessories before buying to boost conversions and reduce returns.
+# Category:      Fashion / Clothing
+# Support email: info@slidez.social
+# Privacy URL:   https://slidez.social/privacy  ← host the PDF as a webpage first
+# Logo:          1200x1200px PNG  ← still needed

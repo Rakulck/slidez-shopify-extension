@@ -1,0 +1,10 @@
+{
+  "framework": "remix",
+  "buildCommand": "npm run build",
+  "installCommand": "npm install",
+  "functions": {
+    "app/entry.server.tsx": {
+      "maxDuration": 30
+    }
+  }
+}

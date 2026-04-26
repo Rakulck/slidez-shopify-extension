@@ -1,7 +1,7 @@
 interface WidgetPreviewProps {
   buttonText: string;
   buttonColor: string;
-  buttonPosition: "below-add-to-cart" | "above-add-to-cart" | "floating-corner";
+  buttonPosition: "below-add-to-cart" | "above-add-to-cart";
   borderRadius?: number;
   fullWidth?: boolean;
 }
@@ -19,7 +19,7 @@ export function WidgetPreview({
         backgroundColor: buttonColor,
         color: "#ffffff",
         padding: "10px 16px",
-        borderRadius: borderRadius,
+        borderRadius: 6,
         fontSize: 13,
         fontWeight: 600,
         textAlign: "center",
@@ -72,16 +72,10 @@ export function WidgetPreview({
           backgroundColor: "#e4e5e7",
           borderRadius: 6,
           height: 120,
-          marginBottom: 12,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: "#8c9196",
-          fontSize: 12,
+          marginBottom: 4,
         }}
-      >
-        Product Image
-      </div>
+      />
+
 
       {/* Mock product title */}
       <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4, color: "#202223" }}>
@@ -95,27 +89,6 @@ export function WidgetPreview({
         {addToCartButton}
         {buttonPosition === "below-add-to-cart" && tryOnButton}
       </div>
-
-      {/* Floating corner button */}
-      {buttonPosition === "floating-corner" && (
-        <div
-          style={{
-            position: "absolute",
-            bottom: 16,
-            right: 16,
-            backgroundColor: buttonColor,
-            color: "#fff",
-            padding: "8px 12px",
-            borderRadius: Math.min(borderRadius, 20),
-            fontSize: 12,
-            fontWeight: 600,
-            boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
-            cursor: "pointer",
-          }}
-        >
-          {buttonText || "Try It On"}
-        </div>
-      )}
     </div>
   );
 }

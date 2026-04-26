@@ -1,7 +1,7 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import { useLoaderData, useFetcher } from "@remix-run/react";
-import { Page } from "@shopify/polaris";
+import { Page, Banner } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 import { firebaseGet, firebasePost } from "../utils/firebase-client";
@@ -56,18 +56,23 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
   const shop = session.shop;
 
+  const url = new URL(request.url);
+  const justUpgraded = url.searchParams.get("upgraded") === "true";
+
   let currentPlan = "growth";
   let plans: Plan[] = FALLBACK_PLANS;
+  let trialEndsAt: string | null = null;
 
   try {
     const fb = await firebaseGet("/api/billing/plans", shop);
     if (fb?.currentPlan) currentPlan = fb.currentPlan;
     if (Array.isArray(fb?.plans) && fb.plans.length > 0) plans = fb.plans;
+    if (fb?.trialEndsAt) trialEndsAt = fb.trialEndsAt;
   } catch {
     // Firebase not connected — use fallback plans
   }
 
-  return json({ currentPlan, plans, shop });
+  return json({ currentPlan, plans, shop, justUpgraded, trialEndsAt });
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -76,8 +81,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const formData = await request.formData();
   const planId = String(formData.get("planId") ?? "");
 
+  const appUrl = process.env.SHOPIFY_APP_URL ?? "";
+  const returnUrl = `${appUrl}/app/billing?upgraded=true`;
+
   try {
-    const result = await firebasePost("/api/billing/subscribe", { shop, planId });
+    const result = await firebasePost("/api/billing/subscribe", { shop, planId, returnUrl });
     if (result?.confirmationUrl) {
       return redirect(result.confirmationUrl);
     }
@@ -95,7 +103,7 @@ const CheckIcon = () => (
 );
 
 export default function Billing() {
-  const { currentPlan, plans } = useLoaderData<typeof loader>();
+  const { currentPlan, plans, justUpgraded, trialEndsAt } = useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
 
   const upgradingPlanId =
@@ -349,6 +357,17 @@ export default function Billing() {
             }
           }
         `}} />
+
+        {justUpgraded && (
+          <Banner tone="success" title="Plan activated">
+            You're now on the {currentPlan} plan. Enjoy your new features!
+          </Banner>
+        )}
+        {trialEndsAt && new Date(trialEndsAt) > new Date() && (
+          <Banner tone="info" title="Free trial active">
+            Your trial ends on {new Date(trialEndsAt).toLocaleDateString()}. No charge until then.
+          </Banner>
+        )}
 
         <div className="pricing-header">
           <h1>Choose Your Plan</h1>
