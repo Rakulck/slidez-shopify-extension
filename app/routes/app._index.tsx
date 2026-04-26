@@ -67,6 +67,18 @@ export default function Dashboard() {
     <Page>
       <TitleBar title="Dashboard" />
       <BlockStack gap="500">
+        {/* Brand header */}
+        <div style={{
+          background: "#010302",
+          borderRadius: 16,
+          padding: "28px 0",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+        }}>
+          <img src="/logo.png" alt="Slidez" style={{ height: 200, width: "auto" }} />
+        </div>
+
         {/* Stat Cards */}
         <InlineGrid columns={3} gap="400">
           <StatCard
@@ -122,6 +134,14 @@ export default function Dashboard() {
                   Quick links
                 </Text>
                 <BlockStack gap="300">
+                  <Button
+                    url={`https://${shop}/admin/themes/current/editor?context=apps&activateAppId=72f82a63b0e306e2138f3fcc90cdd779/virtual-tryon-widget`}
+                    target="_top"
+                    variant="primary"
+                    fullWidth
+                  >
+                    Enable in Theme Editor
+                  </Button>
                   <Button onClick={() => navigate("/app/products")} fullWidth>
                     Configure Products
                   </Button>
@@ -131,14 +151,26 @@ export default function Dashboard() {
                   <Button onClick={() => navigate("/app/settings")} fullWidth>
                     Customize Widget
                   </Button>
-                  <Button
-                    onClick={() => navigate("/app/billing")}
-                    variant="primary"
-                    fullWidth
-                  >
-                    View Plans
-                  </Button>
                 </BlockStack>
+              </BlockStack>
+            </Card>
+
+            {/* Help / Vintage Themes */}
+            <Card>
+              <BlockStack gap="300">
+                <Text as="h2" variant="headingMd">
+                  Vintage Themes
+                </Text>
+                <Text as="p" variant="bodySm" tone="subdued">
+                  Using a theme without App Blocks? You can manually add the widget code to your <Text as="span" fontWeight="bold">product.liquid</Text> or <Text as="span" fontWeight="bold">main-product.liquid</Text> file.
+                </Text>
+                <Button
+                  variant="tertiary"
+                  url="mailto:info@slidez.social?subject=Vintage Theme Help"
+                  fullWidth
+                >
+                  Contact Support for Setup
+                </Button>
               </BlockStack>
             </Card>
           </Layout.Section>

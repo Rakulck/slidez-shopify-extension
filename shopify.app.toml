@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "72f82a63b0e306e2138f3fcc90cdd779"
-name = "Slidez AI Try-On for Shopify"
+name = "Slidez AI Try-On"
 application_url = "https://slidez-shopify-extension.vercel.app"
 embedded = true
 
@@ -20,7 +20,7 @@ api_version = "2026-07"
   uri = "/webhooks/app/scopes_update"
 
 [access_scopes]
-scopes = "read_products,write_products,read_analytics,read_store,read_orders"
+scopes = "read_products"
 
 [auth]
 redirect_urls = [ "https://slidez-shopify-extension.vercel.app/auth/callback" ]

@@ -37,3 +37,19 @@ export async function firebasePost(path: string, body: object) {
   });
   return res.json();
 }
+
+export async function firebaseDelete(path: string, shop: string) {
+  if (!FIREBASE_API_BASE_URL) {
+    throw new Error("Missing Firebase API URL configuration");
+  }
+  const cleanPath = path.startsWith("/") ? path : `/${path}`;
+  const url = `${FIREBASE_API_BASE_URL}${cleanPath}${cleanPath.includes("?") ? "&" : "?"}shop=${encodeURIComponent(shop)}`;
+  
+  const res = await fetch(url, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${FIREBASE_API_KEY}`,
+    },
+  });
+  return res.ok;
+}

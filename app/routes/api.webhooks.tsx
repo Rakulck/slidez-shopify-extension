@@ -15,13 +15,25 @@ export async function action({ request }: ActionFunctionArgs) {
       return new Response("ok", { status: 200 });
 
     case "CUSTOMERS_REDACT":
-      // Firebase handles actual data deletion.
+      // Explicitly call Firebase to delete any potential customer data
       console.log(`[GDPR] customers/redact for shop=${shop}`);
+      try {
+        const { firebaseDelete } = await import("../utils/firebase-client");
+        await firebaseDelete("/gdpr/customer-redact", shop);
+      } catch (err) {
+        console.error("Failed to trigger GDPR deletion in Firebase:", err);
+      }
       return new Response("ok", { status: 200 });
 
     case "SHOP_REDACT":
-      // Shop uninstalled 48h+ ago — Firebase handles deletion.
+      // Explicitly call Firebase to delete shop-related data
       console.log(`[GDPR] shop/redact for shop=${shop}`);
+      try {
+        const { firebaseDelete } = await import("../utils/firebase-client");
+        await firebaseDelete("/gdpr/shop-redact", shop);
+      } catch (err) {
+        console.error("Failed to trigger GDPR shop deletion in Firebase:", err);
+      }
       return new Response("ok", { status: 200 });
 
     default:

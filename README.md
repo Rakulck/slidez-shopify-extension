@@ -350,3 +350,16 @@ This template uses [Remix](https://remix.run). The following Shopify tools are a
 - [App extensions](https://shopify.dev/docs/apps/app-extensions/list)
 - [Shopify Functions](https://shopify.dev/docs/api/functions)
 - [Getting started with internationalizing your app](https://shopify.dev/docs/apps/best-practices/internationalization/getting-started)
+
+## App Review Checklist
+
+Before submitting to the Shopify App Store, ensure the following:
+
+1. **Performance**: Verify that the app does not negatively impact store performance.
+   - **Lighthouse Score**: Ensure the app maintains high Lighthouse scores on product pages.
+   - **Lazy Loading**: The virtual try-on widget is lazy-loaded to minimize initial bundle size.
+2. **GDPR Compliance**: Verify that webhooks for data deletion are properly handled.
+   - **Verifiable Deletion**: The app explicitly calls the backend to redact data on `CUSTOMERS_REDACT` and `SHOP_REDACT`.
+3. **Merchant Eligibility**: Set "Online Store required" in the Partner Dashboard (App Setup > Merchant Install Eligibility).
+4. **Theme Compatibility**: Provide clear instructions for vintage themes (non-OS 2.0).
+5. **Security**: Ensure `SESSION_SECRET` in `.env` is a strong random value (updated in current build).
