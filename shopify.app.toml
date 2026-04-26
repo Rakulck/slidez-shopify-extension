@@ -2,7 +2,7 @@
 
 client_id = "72f82a63b0e306e2138f3fcc90cdd779"
 name = "Slidez AI Try-On for Shopify"
-application_url = "https://YOUR_PRODUCTION_URL" # Replace with deployed URL
+application_url = "https://slidez-shopify-extension.vercel.app"
 embedded = true
 
 [build]
@@ -23,10 +23,10 @@ api_version = "2026-07"
 scopes = "read_products,write_products,read_analytics,read_store,read_orders"
 
 [auth]
-redirect_urls = [ "https://YOUR_PRODUCTION_URL/api/auth" ]
+redirect_urls = [ "https://slidez-shopify-extension.vercel.app/auth/callback" ]
 
 [app_proxy]
-url = "https://YOUR_PRODUCTION_URL/api/product-check"
+url = "https://slidez-shopify-extension.vercel.app/api/product-check"
 subpath = "try-on"
 prefix = "apps"
 

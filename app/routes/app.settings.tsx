@@ -237,16 +237,6 @@ export default function Settings() {
     shopify.toast.show("Settings saved");
   };
 
-  const borderRadiusLabel =
-    borderRadius === 0
-      ? "Square"
-      : borderRadius <= 4
-        ? "Slightly rounded"
-        : borderRadius <= 12
-          ? "Rounded"
-          : borderRadius <= 20
-            ? "Very rounded"
-            : "Pill";
 
   return (
     <Page>

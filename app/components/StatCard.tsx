@@ -1,5 +1,5 @@
 import { Card, BlockStack, Text } from "@shopify/polaris";
-import { ReactNode } from "react";
+import type { ReactNode } from "react";
 
 interface StatCardProps {
   title: string;
