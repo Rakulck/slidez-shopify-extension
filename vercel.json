@@ -1,10 +1,5 @@
 {
   "framework": "remix",
   "buildCommand": "npm run build",
-  "installCommand": "npm install",
-  "functions": {
-    "**/*": {
-      "maxDuration": 30
-    }
-  }
+  "installCommand": "npm install"
 }
