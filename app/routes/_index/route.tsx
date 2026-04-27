@@ -6,6 +6,9 @@ import { login } from "../../shopify.server";
 import styles from "./styles.module.css";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
+  if (process.env.NODE_ENV === "development") {
+    throw redirect("/app/onboarding?preview=1");
+  }
   const url = new URL(request.url);
   if (url.searchParams.get("shop")) {
     throw redirect(`/app?${url.searchParams.toString()}`);

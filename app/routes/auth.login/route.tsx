@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
+import { redirect } from "@remix-run/node";
 import { Form, useActionData, useLoaderData } from "@remix-run/react";
 import {
   AppProvider as PolarisAppProvider,
@@ -20,12 +21,18 @@ import { loginErrorMessage } from "./error.server";
 export const links = () => [{ rel: "stylesheet", href: polarisStyles }];
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
+  if (process.env.NODE_ENV === "development") {
+    throw redirect("/app/onboarding?preview=1");
+  }
   const errors = loginErrorMessage(await login(request));
 
   return { errors, polarisTranslations };
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
+  if (process.env.NODE_ENV === "development") {
+    throw redirect("/app/onboarding?preview=1");
+  }
   const errors = loginErrorMessage(await login(request));
 
   return {

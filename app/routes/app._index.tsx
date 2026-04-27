@@ -1,5 +1,5 @@
 import type { LoaderFunctionArgs } from "@remix-run/node";
-import { json } from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
 import { useLoaderData, useNavigate } from "@remix-run/react";
 import {
   Page,
@@ -24,6 +24,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
   const shop = session.shop;
 
+  const merchantOnboarding = await prisma.merchantConfig.findUnique({
+    where: { shop },
+    select: { onboardingComplete: true },
+  });
+  if (!merchantOnboarding || !merchantOnboarding.onboardingComplete) {
+    throw redirect("/app/onboarding");
+  }
+
   let config: Record<string, unknown> = {};
   let analytics: Record<string, unknown> = {};
 
@@ -44,7 +52,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export default function Dashboard() {
-  const { config, analytics, enabledCount } = useLoaderData<typeof loader>();
+  const { config, analytics, shop, enabledCount } = useLoaderData<typeof loader>();
   const navigate = useNavigate();
 
   const monthlyUsage =
@@ -159,17 +167,38 @@ export default function Dashboard() {
             <Card>
               <BlockStack gap="300">
                 <Text as="h2" variant="headingMd">
-                  Vintage Themes
+                  Vintage / Non-OS2 Themes
                 </Text>
                 <Text as="p" variant="bodySm" tone="subdued">
-                  Using a theme without App Blocks? You can manually add the widget code to your <Text as="span" fontWeight="bold">product.liquid</Text> or <Text as="span" fontWeight="bold">main-product.liquid</Text> file.
+                  Using a theme without App Blocks (e.g. Debut, Brooklyn, Narrative)? Paste the snippet below into your <Text as="span" fontWeight="bold">product.liquid</Text> or <Text as="span" fontWeight="bold">main-product.liquid</Text> file, just after your Add to Cart button.
+                </Text>
+                <div style={{
+                  background: "#F3F4F6",
+                  borderRadius: 8,
+                  padding: "10px 12px",
+                  fontFamily: "monospace",
+                  fontSize: "0.75rem",
+                  color: "#374151",
+                  whiteSpace: "pre-wrap",
+                  wordBreak: "break-all",
+                  userSelect: "all",
+                }}>
+                  {`<div id="slidez-tryon-root"
+  data-product-id="{{ product.id }}"
+  data-shop="{{ shop.permanent_domain }}"
+  data-country="{{ localization.country.iso_code }}">
+</div>
+<script src="{{ 'tryon-widget.js' | asset_url }}" defer></script>`}
+                </div>
+                <Text as="p" variant="bodySm" tone="subdued">
+                  Select all the text above, copy it, then paste it in the Shopify code editor. Need help? Contact us.
                 </Text>
                 <Button
                   variant="tertiary"
-                  url="mailto:info@slidez.social?subject=Vintage Theme Help"
+                  url="mailto:info@slidez.social?subject=Vintage Theme Setup Help"
                   fullWidth
                 >
-                  Contact Support for Setup
+                  Contact Support
                 </Button>
               </BlockStack>
             </Card>

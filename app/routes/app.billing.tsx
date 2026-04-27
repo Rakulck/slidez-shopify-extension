@@ -14,6 +14,8 @@ interface Plan {
   features: string[];
 }
 
+const PLAN_TIERS: Record<string, number> = { growth: 0, pro: 1, enterprise: 2 };
+
 const FALLBACK_PLANS: Plan[] = [
   {
     id: "growth",
@@ -338,7 +340,7 @@ export default function Billing() {
             stroke-linejoin: round;
           }
       
-          @media (max-width: 1024px) {
+          @media (max-width: 900px) {
             .pricing-grid {
               grid-template-columns: repeat(2, 1fr);
             }
@@ -349,7 +351,7 @@ export default function Billing() {
               transform: translateY(-4px);
             }
           }
-          @media (max-width: 768px) {
+          @media (max-width: 640px) {
             .pricing-grid {
               grid-template-columns: 1fr;
               max-width: 400px;
@@ -382,25 +384,35 @@ export default function Billing() {
           {plans.map((plan) => {
             const isCurrent = plan.id === currentPlan;
             const isUpgrading = upgradingPlanId === plan.id;
-            const isPopular = plan.id === "pro"; // Highlighting Pro
+            const isPopular = plan.id === "pro";
+            const currentTier = PLAN_TIERS[currentPlan] ?? 0;
+            const planTier = PLAN_TIERS[plan.id] ?? 0;
+            const isDowngrade = planTier < currentTier;
+
+            const ctaLabel = isCurrent
+              ? "Current Plan"
+              : isDowngrade
+              ? `Downgrade to ${plan.name}`
+              : `Upgrade to ${plan.name}`;
 
             return (
               <div key={plan.id} className={`pricing-card ${isPopular ? "popular" : ""}`}>
                 {isPopular && <div className="popular-badge">Most Popular</div>}
-                
+
                 <h3 className="plan-name" style={{ color: isPopular ? '#6366F1' : '#374151' }}>{plan.name}</h3>
                 <div className="plan-price">
-                  ${plan.price}<span>/mo</span>
+                  {plan.price === 0 ? "Free" : `$${plan.price}`}
+                  {plan.price > 0 && <span>/mo</span>}
                 </div>
-                
+
                 {plan.trialDays ? (
                   <div><span className="trial-badge">{plan.trialDays}-Day Free Trial</span></div>
                 ) : (
                   <div className="trial-spacer"></div>
                 )}
-                
+
                 <div className="divider" />
-                
+
                 <ul className="features-list">
                   {plan.features.map((f, i) => (
                     <li key={i} className="feature-item">
@@ -416,19 +428,19 @@ export default function Billing() {
                     type="submit"
                     disabled={isCurrent || isUpgrading}
                     className={`cta-button ${
-                      isCurrent 
-                        ? "cta-disabled" 
-                        : isPopular 
-                          ? "cta-primary" 
-                          : "cta-base"
+                      isCurrent
+                        ? "cta-disabled"
+                        : isDowngrade
+                        ? "cta-base"
+                        : isPopular
+                        ? "cta-primary"
+                        : "cta-base"
                     }`}
                   >
                     {isUpgrading ? (
                       <span style={{ opacity: 0.7 }}>Processing...</span>
-                    ) : isCurrent ? (
-                      "Current Plan"
                     ) : (
-                      "Upgrade to " + plan.name
+                      ctaLabel
                     )}
                   </button>
                 </fetcher.Form>

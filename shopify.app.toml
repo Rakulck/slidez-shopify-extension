@@ -31,7 +31,7 @@ subpath = "try-on"
 prefix = "apps"
 
 # ── Partner Dashboard fields (enter these at partners.shopify.com, not here) ──
-# Name:          Slidez AI Try-On for Shopify
+# Name:          Slidez AI Try-On
 # Tagline:       Boost sales with AI virtual try-on
 # Description:   Increase sales with AI virtual try-on. Let shoppers try clothes, makeup, and accessories before buying to boost conversions and reduce returns.
 # Category:      Fashion / Clothing

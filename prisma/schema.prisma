@@ -27,7 +27,9 @@ model MerchantConfig {
   buttonPosition String  @default("below-add-to-cart")
   borderRadius   Int     @default(8)
   fullWidth      Boolean @default(true)
-  showWatermark  Boolean @default(true)
+  showWatermark      Boolean @default(true)
+  onboardingComplete Boolean @default(false)
+  storeType          String?
 }
 
 model Session {
