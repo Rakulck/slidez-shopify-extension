@@ -79,6 +79,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   // Get range from URL params
   const url = new URL(request.url);
+  if (process.env.NODE_ENV === "development" && url.searchParams.get("preview") === "1") {
+    return json<LoaderData>({ paywalled: false, empty: true, range: "30" });
+  }
   const range = url.searchParams.get("range") ?? "30";
 
 

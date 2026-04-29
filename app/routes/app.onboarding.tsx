@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
-import { useLoaderData, useFetcher } from "@remix-run/react";
+import { useLoaderData, useFetcher, Form } from "@remix-run/react";
 import {
   Page,
   Text,
+  Button,
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
@@ -99,20 +100,7 @@ const CONFETTI_COLORS = ["#6366F1", "#EC4899", "#F59E0B", "#10B981", "#3B82F6"];
 
 // ─── Loader ───────────────────────────────────────────────────────────────────
 
-const isDevPreview = (request: Request) =>
-  process.env.NODE_ENV === "development" &&
-  new URL(request.url).searchParams.get("preview") === "1";
-
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  if (isDevPreview(request)) {
-    return json({
-      defaultButtonText: "Try It On",
-      defaultButtonColor: "#6366F1",
-      defaultButtonPosition: "below-add-to-cart" as const,
-      preview: true,
-    });
-  }
-
   const { session } = await authenticate.admin(request);
   const shop = session.shop;
 
@@ -127,7 +115,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   });
 
   if (config?.onboardingComplete) {
-    throw redirect("/app");
+    const url = new URL(request.url);
+    throw redirect(`/app${url.search}`);
   }
 
   return json({
@@ -136,35 +125,38 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     defaultButtonPosition:
       (config?.buttonPosition as "below-add-to-cart" | "above-add-to-cart") ??
       "below-add-to-cart",
-    preview: false,
   });
 };
 
 // ─── Action ───────────────────────────────────────────────────────────────────
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  if (isDevPreview(request)) {
-    throw redirect("/app/onboarding?preview=1");
-  }
-
   const { session } = await authenticate.admin(request);
   const shop = session.shop;
   const formData = await request.formData();
   const storeType = String(formData.get("storeType") ?? "");
 
-  await prisma.merchantConfig.upsert({
-    where: { shop },
-    update: { onboardingComplete: true, storeType: storeType || null },
-    create: { shop, onboardingComplete: true, storeType: storeType || null },
-  });
+  console.log(`[Action] Saving config for ${shop}. StoreType: ${storeType}`);
 
-  throw redirect("/app");
+  try {
+    await prisma.merchantConfig.upsert({
+      where: { shop },
+      update: { onboardingComplete: true, storeType: storeType || null },
+      create: { shop, onboardingComplete: true, storeType: storeType || null },
+    });
+    console.log(`[Action] Successfully updated database for ${shop}`);
+  } catch (error) {
+    console.error(`[Action] Database error for ${shop}:`, error);
+    throw error;
+  }
+
+  const url = new URL(request.url);
+  throw redirect(`/app${url.search}`);
 };
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function Onboarding() {
-  const { preview } = useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
 
   const [state, setState] = useState<OnboardingState>({
@@ -196,7 +188,10 @@ export default function Onboarding() {
     return () => { if (demoTimerRef.current) clearTimeout(demoTimerRef.current); };
   }, [state.step]);
 
-  const goTo = (step: OnboardingState["step"]) => setState((s) => ({ ...s, step }));
+  const goTo = (step: OnboardingState["step"]) => {
+    console.log(`[Onboarding] Navigating to step ${step}`);
+    setState((s) => ({ ...s, step }));
+  };
 
   const goBack = () => {
     if (state.step > 1) {
@@ -209,7 +204,7 @@ export default function Onboarding() {
 
   return (
     <Page>
-      {!preview && <TitleBar title="Get Started with Slidez" />}
+      <TitleBar title="Get Started with Slidez" />
 
       {/* Progress bar */}
       <div className={styles.progressWrapper}>
@@ -247,7 +242,6 @@ export default function Onboarding() {
         )}
         {state.step === 5 && (
           <StepComplete
-            fetcher={fetcher}
             storeType={state.storeType}
             planChosen={state.planChosen}
             onBack={goBack}
@@ -268,9 +262,13 @@ function StepWelcome({ onNext }: { onNext: () => void }) {
       <p className={styles.stepSubtext}>
         Let shoppers try before they buy — AI-powered virtual try-on for your store.
       </p>
-      <button type="button" className={styles.btnPrimary} onClick={onNext}>
+      <Button
+        variant="primary"
+        size="large"
+        onClick={onNext}
+      >
         Start Setup
-      </button>
+      </Button>
     </div>
   );
 }
@@ -310,7 +308,10 @@ function StepStoreType({
             className={`${styles.storeTypeCard} ${
               selected === t.id ? styles.storeTypeCardSelected : ""
             }`}
-            onClick={() => onSelect(t.id)}
+            onClick={() => {
+              console.log(`[Onboarding] Store type selected: ${t.id}`);
+              onSelect(t.id);
+            }}
             aria-pressed={selected === t.id}
             aria-label={`${t.label} store type`}
           >
@@ -320,14 +321,14 @@ function StepStoreType({
         ))}
       </div>
 
-      <button
-        type="button"
-        className={styles.btnPrimary}
+      <Button
+        variant="primary"
+        size="large"
         disabled={!selected}
         onClick={onNext}
       >
         Continue
-      </button>
+      </Button>
     </div>
   );
 }
@@ -414,9 +415,9 @@ function StepDemo({
         ))}
       </div>
 
-      <button type="button" className={styles.btnPrimary} onClick={onNext}>
+      <Button variant="primary" size="large" onClick={onNext}>
         Continue Setup
-      </button>
+      </Button>
     </div>
   );
 }
@@ -460,7 +461,10 @@ function StepPricing({
             ]
               .filter(Boolean)
               .join(" ")}
-            onClick={() => onSelect(plan.id)}
+            onClick={() => {
+              console.log(`[Onboarding] Plan selected: ${plan.id}`);
+              onSelect(plan.id);
+            }}
             aria-pressed={selected === plan.id}
           >
             {plan.recommended && (
@@ -483,9 +487,9 @@ function StepPricing({
         ))}
       </div>
 
-      <button type="button" className={styles.btnPrimary} onClick={onNext}>
+      <Button variant="primary" size="large" onClick={onNext}>
         {selected ? "Start Free Trial" : "Skip for now"}
-      </button>
+      </Button>
     </div>
   );
 }
@@ -493,12 +497,10 @@ function StepPricing({
 // ─── Step 5: Complete ─────────────────────────────────────────────────────────
 
 function StepComplete({
-  fetcher,
   storeType,
   planChosen,
   onBack,
 }: {
-  fetcher: ReturnType<typeof useFetcher>;
   storeType: StoreType | null;
   planChosen: PlanId | null;
   onBack: () => void;
@@ -530,21 +532,26 @@ function StepComplete({
           Shoppers can now try on products right from your store.
         </p>
 
-        <fetcher.Form method="post">
+        <Form method="post">
           <input type="hidden" name="storeType" value={storeType ?? ""} />
           <input type="hidden" name="planChosen" value={planChosen ?? "skip"} />
-          <button
-            type="submit"
-            className={styles.btnPrimary}
-            disabled={fetcher.state !== "idle"}
+          <Button
+            submit
+            variant="primary"
+            size="large"
+            onClick={() => console.log("[Onboarding] View Dashboard submitted")}
           >
-            {fetcher.state !== "idle" ? "Loading…" : "View Dashboard"}
-          </button>
-        </fetcher.Form>
+            View Dashboard
+          </Button>
+        </Form>
 
-        <a href="/app/products" className={styles.btnSecondary}>
+        <Button
+          variant="tertiary"
+          url="/app/products"
+          className={styles.btnSecondary}
+        >
           Test Live Store
-        </a>
+        </Button>
 
         <button type="button" className={styles.btnLink} onClick={onBack}>
           <IconBack /> Go back

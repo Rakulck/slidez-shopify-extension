@@ -14,22 +14,34 @@ import {
 } from "@shopify/polaris";
 import { CheckCircleIcon, MinusCircleIcon } from "@shopify/polaris-icons";
 import { TitleBar } from "@shopify/app-bridge-react";
-import { authenticate } from "../shopify.server";
+import { authenticate, MONTHLY_PLAN_GROWTH, MONTHLY_PLAN_PRO, MONTHLY_PLAN_ENTERPRISE } from "../shopify.server";
 import { firebaseGet } from "../utils/firebase-client";
 import prisma from "../db.server";
 import { StatCard } from "../components/StatCard";
 import { PlanBadge } from "../components/PlanBadge";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
+  const { billing, session } = await authenticate.admin(request);
   const shop = session.shop;
+
+  const billingCheck = await billing.check({
+    plans: [MONTHLY_PLAN_GROWTH, MONTHLY_PLAN_PRO, MONTHLY_PLAN_ENTERPRISE],
+    isTest: true, // Set to false in production
+  });
 
   const merchantOnboarding = await prisma.merchantConfig.findUnique({
     where: { shop },
     select: { onboardingComplete: true },
   });
+  
   if (!merchantOnboarding || !merchantOnboarding.onboardingComplete) {
-    throw redirect("/app/onboarding");
+    const url = new URL(request.url);
+    throw redirect(`/app/onboarding${url.search}`);
+  }
+
+  let currentPlan = "free";
+  if (billingCheck.hasActivePayment) {
+    currentPlan = billingCheck.appSubscriptions[0].name.toLowerCase();
   }
 
   let config: Record<string, unknown> = {};
@@ -48,17 +60,21 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     where: { shop, enabled: true },
   });
 
-  return json({ config, analytics, shop, enabledCount });
+  return json({ config, analytics, shop, enabledCount, currentPlan });
 };
 
 export default function Dashboard() {
-  const { config, analytics, shop, enabledCount } = useLoaderData<typeof loader>();
+  const { config, analytics, shop, enabledCount, currentPlan } = useLoaderData<typeof loader>();
   const navigate = useNavigate();
+
+  const nav = (path: string) => {
+    navigate(path);
+  };
 
   const monthlyUsage =
     (analytics as any)?.monthlyUsage?.[0]?.count ?? 0;
   const activeProducts = enabledCount;
-  const planId = (config as any)?.planId ?? "free";
+  const planId = currentPlan;
   const buttonText = (config as any)?.buttonText ?? "";
   const hasActiveProducts = activeProducts > 0;
   const hasCustomizedWidget = buttonText !== "" && buttonText !== "Try It On";
@@ -147,17 +163,33 @@ export default function Dashboard() {
                     target="_top"
                     variant="primary"
                     fullWidth
+                    onClick={() => console.log("[Dashboard] Theme Editor clicked")}
                   >
                     Enable in Theme Editor
                   </Button>
-                  <Button onClick={() => navigate("/app/products")} fullWidth>
+                  <Button onClick={() => {
+                    console.log("[Dashboard] Configure Products clicked");
+                    nav("/app/products");
+                  }} fullWidth>
                     Configure Products
                   </Button>
-                  <Button onClick={() => navigate("/app/analytics")} fullWidth>
+                  <Button onClick={() => {
+                    console.log("[Dashboard] View Analytics clicked");
+                    nav("/app/analytics");
+                  }} fullWidth>
                     View Analytics
                   </Button>
-                  <Button onClick={() => navigate("/app/settings")} fullWidth>
+                  <Button onClick={() => {
+                    console.log("[Dashboard] Customize Widget clicked");
+                    nav("/app/settings");
+                  }} fullWidth>
                     Customize Widget
+                  </Button>
+                  <Button onClick={() => {
+                    console.log("[Dashboard] Billing clicked");
+                    nav("/app/billing");
+                  }} fullWidth>
+                    Manage Subscription
                   </Button>
                 </BlockStack>
               </BlockStack>

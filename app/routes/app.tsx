@@ -12,32 +12,12 @@ import { authenticate } from "../shopify.server";
 export const links = () => [{ rel: "stylesheet", href: polarisStyles }];
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const url = new URL(request.url);
-  if (process.env.NODE_ENV === "development" && url.searchParams.get("preview") === "1") {
-    return { apiKey: process.env.SHOPIFY_API_KEY || "", preview: true };
-  }
   await authenticate.admin(request);
-  return { apiKey: process.env.SHOPIFY_API_KEY || "", preview: false };
+  return { apiKey: process.env.SHOPIFY_API_KEY || "" };
 };
 
 export default function App() {
-  const { apiKey, preview } = useLoaderData<typeof loader>();
-
-  if (preview) {
-    return (
-      <PolarisAppProvider i18n={polarisTranslations}>
-        <style>{`
-          html, body { background-color: #F4F6F8; margin: 0; }
-          .Polaris-Card {
-            background-color: #FFFFFF !important;
-            box-shadow: 0 12px 32px rgba(0,0,0,0.12), 0 4px 12px rgba(0,0,0,0.08) !important;
-            border-radius: 16px !important;
-          }
-        `}</style>
-        <Outlet />
-      </PolarisAppProvider>
-    );
-  }
+  const { apiKey } = useLoaderData<typeof loader>();
 
   return (
     <AppProvider isEmbeddedApp apiKey={apiKey}>

@@ -3,8 +3,7 @@ import { json, redirect } from "@remix-run/node";
 import { useLoaderData, useFetcher } from "@remix-run/react";
 import { Page, Banner } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
-import { authenticate } from "../shopify.server";
-import { firebaseGet, firebasePost } from "../utils/firebase-client";
+import { authenticate, MONTHLY_PLAN_GROWTH, MONTHLY_PLAN_PRO, MONTHLY_PLAN_ENTERPRISE } from "../shopify.server";
 
 interface Plan {
   id: string;
@@ -22,7 +21,7 @@ const FALLBACK_PLANS: Plan[] = [
     name: "Growth",
     price: 49,
     features: [
-      "500 try-ons/month",
+      "250 try-ons/month",
       "Unlimited products",
       "No watermark",
     ],
@@ -33,7 +32,7 @@ const FALLBACK_PLANS: Plan[] = [
     price: 99,
     trialDays: 7,
     features: [
-      "2,000 try-ons/month",
+      "500 try-ons/month",
       "Analytics dashboard",
       "Priority support",
       "7-day free trial",
@@ -45,57 +44,60 @@ const FALLBACK_PLANS: Plan[] = [
     price: 249,
     trialDays: 7,
     features: [
-      "Unlimited try-ons",
+      "2,500 try-ons included",
+      "$0.08 per extra try-on",
       "API access",
       "White-label option",
-      "SLA guarantee",
       "7-day free trial",
     ],
   },
 ];
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
-  const shop = session.shop;
-
+  const { billing, session } = await authenticate.admin(request);
   const url = new URL(request.url);
-  const justUpgraded = url.searchParams.get("upgraded") === "true";
+  
+  const billingCheck = await billing.check({
+    plans: [MONTHLY_PLAN_GROWTH, MONTHLY_PLAN_PRO, MONTHLY_PLAN_ENTERPRISE],
+    isTest: true, // Set to false in production
+  });
 
-  let currentPlan = "growth";
-  let plans: Plan[] = FALLBACK_PLANS;
+  const justUpgraded = url.searchParams.get("upgraded") === "true";
+  
+  // Find the active plan name from Shopify subscriptions
+  let currentPlan = "free";
   let trialEndsAt: string | null = null;
 
-  try {
-    const fb = await firebaseGet("/api/billing/plans", shop);
-    if (fb?.currentPlan) currentPlan = fb.currentPlan;
-    if (Array.isArray(fb?.plans) && fb.plans.length > 0) plans = fb.plans;
-    if (fb?.trialEndsAt) trialEndsAt = fb.trialEndsAt;
-  } catch {
-    // Firebase not connected — use fallback plans
+  if (billingCheck.hasActivePayment) {
+    const activeSub = billingCheck.appSubscriptions[0];
+    currentPlan = activeSub.name.toLowerCase();
+    trialEndsAt = activeSub.trialDays ? new Date(activeSub.createdAt).getTime() + (activeSub.trialDays * 86400000) > Date.now() ? new Date(new Date(activeSub.createdAt).getTime() + (activeSub.trialDays * 86400000)).toISOString() : null : null;
   }
 
-  return json({ currentPlan, plans, shop, justUpgraded, trialEndsAt });
+  return json({ 
+    currentPlan, 
+    plans: FALLBACK_PLANS, 
+    shop: session.shop, 
+    justUpgraded, 
+    trialEndsAt
+  });
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
-  const shop = session.shop;
+  const { billing } = await authenticate.admin(request);
   const formData = await request.formData();
   const planId = String(formData.get("planId") ?? "");
 
-  const appUrl = process.env.SHOPIFY_APP_URL ?? "";
-  const returnUrl = `${appUrl}/app/billing?upgraded=true`;
+  // Map plan ID to Shopify Plan Name
+  let planName = MONTHLY_PLAN_GROWTH;
+  if (planId === "pro") planName = MONTHLY_PLAN_PRO;
+  if (planId === "enterprise") planName = MONTHLY_PLAN_ENTERPRISE;
 
-  try {
-    const result = await firebasePost("/api/billing/subscribe", { shop, planId, returnUrl });
-    if (result?.confirmationUrl) {
-      return redirect(result.confirmationUrl);
-    }
-  } catch {
-    // Firebase not connected
-  }
-
-  return json({ success: true });
+  return await billing.request({
+    plan: planName,
+    isTest: true, // Set to false in production
+    returnUrl: `${process.env.SHOPIFY_APP_URL}/app/billing?upgraded=true`,
+  });
 };
 
 const CheckIcon = () => (

@@ -30,6 +30,11 @@ const PRODUCTS_QUERY = `#graphql
 `;
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const url = new URL(request.url);
+  if (process.env.NODE_ENV === "development" && url.searchParams.get("preview") === "1") {
+    return json({ products: [], shop: "preview.myshopify.com" });
+  }
+
   const { admin, session } = await authenticate.admin(request);
   const shop = session.shop;
 
