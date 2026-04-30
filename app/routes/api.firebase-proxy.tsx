@@ -4,7 +4,7 @@
 // This route adds the Firebase auth header and proxies the request.
 
 import { type LoaderFunctionArgs, type ActionFunctionArgs, json } from "@remix-run/node";
-import { authenticate, unauthenticated, MONTHLY_PLAN_GROWTH, MONTHLY_PLAN_PRO, MONTHLY_PLAN_ENTERPRISE } from "../shopify.server";
+import shopify, { authenticate, unauthenticated, MONTHLY_PLAN_GROWTH, MONTHLY_PLAN_PRO, MONTHLY_PLAN_ENTERPRISE } from "../shopify.server";
 import { firebaseGet, firebasePost } from "../utils/firebase-client";
 
 // GET /apps/try-on?action=presign&shop=...&productId=...
@@ -44,10 +44,10 @@ export async function action({ request }: ActionFunctionArgs) {
 
   if (actionType === "process" || !actionType) {
     try {
-      const { billing } = await unauthenticated.admin(shop);
+      const { session } = await unauthenticated.admin(shop);
       
       // Check if merchant has reached their hard limit
-      const check = await billing.check({
+      const check = await shopify.billing.check(session, {
         plans: [MONTHLY_PLAN_GROWTH, MONTHLY_PLAN_PRO, MONTHLY_PLAN_ENTERPRISE],
         isTest: true,
       });

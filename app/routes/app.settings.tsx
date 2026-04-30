@@ -91,11 +91,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   if (slidezUserId) {
     try {
       firebaseResult = await firebasePost("/linkMerchant", { shop, slidezUserId });
-      console.log("DEBUG: linkMerchant result:", firebaseResult);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Unknown error";
-      console.error("DEBUG: Failed to reach Firebase /linkMerchant:", msg);
-      firebaseResult = { error: msg };
+      console.error("Failed to reach Firebase /linkMerchant:", err instanceof Error ? err.message : err);
+      firebaseResult = { error: "Could not connect to Slidez. Please try again." };
     }
   }
 
@@ -205,7 +203,7 @@ export default function Settings() {
     } catch (error: any) {
       console.error("Login failed:", error);
       setLoginError(true);
-      shopify.toast.show("Login failed: " + error.message, { isError: true });
+      shopify.toast.show("Incorrect email or password. Please try again.", { isError: true });
     }
   };
 

@@ -1,6 +1,6 @@
 import { json } from "@remix-run/node";
 import type { LoaderFunctionArgs } from "@remix-run/node";
-import { unauthenticated, MONTHLY_PLAN_GROWTH, MONTHLY_PLAN_PRO, MONTHLY_PLAN_ENTERPRISE } from "../shopify.server";
+import shopify, { unauthenticated, MONTHLY_PLAN_GROWTH, MONTHLY_PLAN_PRO, MONTHLY_PLAN_ENTERPRISE } from "../shopify.server";
 import { firebaseGet } from "../utils/firebase-client";
 import prisma from "../db.server";
 
@@ -36,8 +36,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   // Check Limits
   let limitReached = false;
   try {
-    const { billing } = await unauthenticated.admin(shop);
-    const check = await billing.check({
+    const { session } = await unauthenticated.admin(shop);
+    const check = await shopify.billing.check(session, {
       plans: [MONTHLY_PLAN_GROWTH, MONTHLY_PLAN_PRO, MONTHLY_PLAN_ENTERPRISE],
       isTest: true,
     });
