@@ -56,8 +56,13 @@
       modelWomanUrl = cdnBaseUrl + 'files/model-woman.jpg?v=' + Date.now();
     }
 
+    var modelManUrl2 = button.getAttribute('data-tryon-model-man-2') || modelManUrl;
+    var modelWomanUrl2 = button.getAttribute('data-tryon-model-woman-2') || modelWomanUrl;
+
     this.modelManUrl = modelManUrl;
     this.modelWomanUrl = modelWomanUrl;
+    this.modelManUrl2 = modelManUrl2;
+    this.modelWomanUrl2 = modelWomanUrl2;
 
     // Product data (passed via Liquid data attributes)
     this.productImageUrl = button.getAttribute('data-tryon-product-image') || '';
@@ -68,6 +73,7 @@
     this.mode = null; // 'upload' | 'ai'
     this.file = null;
     this._userImageData = null; // { base64, mimeType } for upload mode
+    this._cachedPhotoDataUrl = null; // data URL cached across opens
     this.aiOptions = { gender: null, modelImage: null };
     this.uploadId = null;
     this.resultUrl = null;
@@ -102,8 +108,7 @@
 
     inner.appendChild(this._buildConsentStep());
     inner.appendChild(this._buildModeStep());
-    inner.appendChild(this._buildUploadStep());
-    inner.appendChild(this._buildAiModelStep());
+    inner.appendChild(this._buildLookStep());
     inner.appendChild(this._buildLoadingStep());
     inner.appendChild(this._buildResultStep());
     inner.appendChild(this._buildErrorStep());
@@ -126,16 +131,6 @@
     });
     panel.querySelector('[data-tryon-decline]').addEventListener('click', function () {
       self.close();
-    });
-
-    // Mode cards
-    panel.querySelector('[data-tryon-mode="upload"]').addEventListener('click', function () {
-      self.mode = 'upload';
-      self.showStep('upload');
-    });
-    panel.querySelector('[data-tryon-mode="ai"]').addEventListener('click', function () {
-      self.mode = 'ai';
-      self.showStep('ai');
     });
 
     // File input
@@ -163,19 +158,20 @@
       }
     });
 
-    // Upload submit
-    panel.querySelector('[data-tryon-submit]').addEventListener('click', function () {
-      self.process();
-    });
-
-    // AI generate
+    // Generate / submit (unified for upload and AI modes)
     panel.querySelector('[data-tryon-generate]').addEventListener('click', function () {
-      if (self.aiOptions.gender && self.aiOptions.modelImage) {
+      var ready = false;
+      if (self.mode === 'ai') {
+        ready = !!(self.aiOptions.gender && self.aiOptions.modelImage);
+      } else if (self.mode === 'upload') {
+        ready = !!(self._userImageData || self.file);
+      }
+      if (ready) {
         self.process();
       }
     });
 
-    // Gender pills
+    // Gender pills — set gender then navigate to combined look step
     var genderBtns = panel.querySelectorAll('[data-tryon-gender]');
     for (i = 0; i < genderBtns.length; i++) {
       (function (btn) {
@@ -184,40 +180,12 @@
           for (var j = 0; j < all.length; j++) { all[j].classList.remove('selected'); }
           btn.classList.add('selected');
           self.aiOptions.gender = btn.getAttribute('data-tryon-gender');
-          self._checkAiReady();
+          self.showStep('look');
         });
       })(genderBtns[i]);
     }
 
-    // Body type pills
-    var bodyBtns = panel.querySelectorAll('[data-tryon-body]');
-    for (i = 0; i < bodyBtns.length; i++) {
-      (function (btn) {
-        btn.addEventListener('click', function () {
-          var all = panel.querySelectorAll('[data-tryon-body]');
-          for (var j = 0; j < all.length; j++) { all[j].classList.remove('selected'); }
-          btn.classList.add('selected');
-          self.aiOptions.bodyType = btn.getAttribute('data-tryon-body');
-          self._checkAiReady();
-        });
-      })(bodyBtns[i]);
-    }
-
-    // Skin tone swatches
-    var toneBtns = panel.querySelectorAll('[data-tryon-tone]');
-    for (i = 0; i < toneBtns.length; i++) {
-      (function (btn) {
-        btn.addEventListener('click', function () {
-          var all = panel.querySelectorAll('[data-tryon-tone]');
-          for (var j = 0; j < all.length; j++) { all[j].classList.remove('selected'); }
-          btn.classList.add('selected');
-          self.aiOptions.skinTone = btn.getAttribute('data-tryon-tone');
-          self._checkAiReady();
-        });
-      })(toneBtns[i]);
-    }
-
-    // Model image selection
+    // Model image selection — sets mode to 'ai', deselects photo card (keeps cached photo)
     var modelImgBtns = panel.querySelectorAll('[data-tryon-model-image]');
     for (i = 0; i < modelImgBtns.length; i++) {
       (function (btn) {
@@ -226,9 +194,39 @@
           for (var j = 0; j < all.length; j++) { all[j].classList.remove('selected'); }
           btn.classList.add('selected');
           self.aiOptions.modelImage = btn.getAttribute('data-tryon-model-image');
+          self.mode = 'ai';
+          self.file = null;
+          var dz = panel.querySelector('.tryon-dropzone');
+          if (dz) { dz.classList.remove('selected'); }
           self._checkAiReady();
         });
       })(modelImgBtns[i]);
+    }
+
+    // Dropzone click — when showing a photo, re-selects upload mode (no file dialog)
+    var dropzoneEl = panel.querySelector('.tryon-dropzone');
+    if (dropzoneEl) {
+      dropzoneEl.addEventListener('click', function (e) {
+        if (!dropzoneEl.classList.contains('has-photo')) return; // normal click-to-browse
+        if (e.target.getAttribute('data-tryon-photo-remove') !== null) return; // handled below
+        e.preventDefault();
+        e.stopPropagation();
+        var allModels = panel.querySelectorAll('[data-tryon-model-image]');
+        for (var j = 0; j < allModels.length; j++) { allModels[j].classList.remove('selected'); }
+        dropzoneEl.classList.add('selected');
+        self.aiOptions.modelImage = null;
+        self.mode = 'upload';
+        self._checkAiReady();
+      });
+    }
+
+    // Remove button — clears the cached photo
+    var removeBtn = panel.querySelector('[data-tryon-photo-remove]');
+    if (removeBtn) {
+      removeBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        self._clearPhoto();
+      });
     }
 
     // Try again — flush state, back to mode select
@@ -264,7 +262,12 @@
   TryOnWidget.prototype._checkAiReady = function () {
     var btn = this._panel.querySelector('[data-tryon-generate]');
     if (!btn) return;
-    var ready = !!(this.aiOptions.gender && this.aiOptions.modelImage);
+    var ready = false;
+    if (this.mode === 'ai') {
+      ready = !!(this.aiOptions.gender && this.aiOptions.modelImage);
+    } else if (this.mode === 'upload') {
+      ready = !!(this._userImageData || this.file);
+    }
     btn.disabled = !ready;
     btn.style.opacity = ready ? '1' : '0.4';
   };
@@ -318,113 +321,40 @@
     title.className = 'tryon-mode-title';
     title.textContent = 'How do you want to try it on?';
 
-    var cards = document.createElement('div');
-    cards.className = 'tryon-mode-cards';
+    var pills = document.createElement('div');
+    pills.className = 'tryon-selector-pills';
 
-    var uploadCard = document.createElement('button');
-    uploadCard.className = 'tryon-mode-card';
-    uploadCard.setAttribute('data-tryon-mode', 'upload');
-    uploadCard.innerHTML =
-      '<div class="tryon-mode-icon">\uD83D\uDCF8</div>' +
-      '<div class="tryon-mode-label">Upload your photo</div>' +
-      '<div class="tryon-mode-desc">Use your own photo for a personal fit</div>';
+    var femaleBtn = document.createElement('button');
+    femaleBtn.className = 'tryon-selector-pill';
+    femaleBtn.setAttribute('data-tryon-gender', 'female');
+    femaleBtn.textContent = '♀ Female';
 
-    var aiCard = document.createElement('button');
-    aiCard.className = 'tryon-mode-card';
-    aiCard.setAttribute('data-tryon-mode', 'ai');
-    aiCard.innerHTML =
-      '<div class="tryon-mode-icon">\u2728</div>' +
-      '<div class="tryon-mode-label">Use AI model</div>' +
-      '<div class="tryon-mode-desc">Instant \u2014 choose your look & body type</div>';
+    var maleBtn = document.createElement('button');
+    maleBtn.className = 'tryon-selector-pill';
+    maleBtn.setAttribute('data-tryon-gender', 'male');
+    maleBtn.textContent = '♂ Male';
 
-    cards.appendChild(uploadCard);
-    cards.appendChild(aiCard);
+    pills.appendChild(femaleBtn);
+    pills.appendChild(maleBtn);
     step.appendChild(title);
-    step.appendChild(cards);
+    step.appendChild(pills);
     return step;
   };
 
-  TryOnWidget.prototype._buildUploadStep = function () {
+  TryOnWidget.prototype._buildLookStep = function () {
+    var self = this;
     var step = document.createElement('div');
-    step.className = 'tryon-step';
-    step.setAttribute('data-step', 'upload');
+    step.className = 'tryon-step tryon-look-step';
+    step.setAttribute('data-step', 'look');
     step.setAttribute('hidden', '');
 
+    // Header with back button
     var header = document.createElement('div');
     header.className = 'tryon-step-header';
     var backBtn = document.createElement('button');
     backBtn.className = 'tryon-back-btn';
     backBtn.setAttribute('data-tryon-back', 'mode');
-    backBtn.innerHTML = '\u2190 Back';
-    var stepTitle = document.createElement('span');
-    stepTitle.className = 'tryon-step-title';
-    stepTitle.textContent = 'Upload Your Photo';
-    header.appendChild(backBtn);
-    header.appendChild(stepTitle);
-
-    var dropzone = document.createElement('div');
-    dropzone.className = 'tryon-dropzone';
-    var icon = document.createElement('div');
-    icon.className = 'tryon-dropzone-icon';
-    icon.textContent = '\uD83D\uDCF7';
-    var label = document.createElement('div');
-    label.className = 'tryon-dropzone-label';
-    label.innerHTML = 'Drag your photo here<br>or <span class="tryon-dropzone-link">browse files</span>';
-    var hint = document.createElement('div');
-    hint.className = 'tryon-dropzone-hint';
-    hint.textContent = 'JPEG, PNG, WebP, HEIC \u00B7 Max 10 MB';
-    var input = document.createElement('input');
-    input.type = 'file';
-    input.className = 'tryon-dropzone-input';
-    input.accept = TYPES.join(',');
-    dropzone.appendChild(icon);
-    dropzone.appendChild(label);
-    dropzone.appendChild(hint);
-    dropzone.appendChild(input);
-
-    // Preview with crop-grid overlay
-    var previewWrap = document.createElement('div');
-    previewWrap.className = 'tryon-preview-wrap';
-    var preview = document.createElement('img');
-    preview.className = 'tryon-preview';
-    preview.alt = 'Preview';
-    var cropGrid = document.createElement('div');
-    cropGrid.className = 'tryon-crop-grid';
-    previewWrap.appendChild(preview);
-    previewWrap.appendChild(cropGrid);
-
-    var submit = document.createElement('button');
-    submit.className = 'tryon-btn-primary';
-    submit.setAttribute('data-tryon-submit', '');
-    submit.textContent = 'Try It On \u2192';
-    submit.disabled = true;
-    submit.style.opacity = '0.4';
-
-    var privacy = document.createElement('p');
-    privacy.className = 'tryon-privacy-note';
-    privacy.textContent = 'Photo used only for this try-on and deleted immediately.';
-
-    step.appendChild(header);
-    step.appendChild(dropzone);
-    step.appendChild(previewWrap);
-    step.appendChild(submit);
-    step.appendChild(privacy);
-    return step;
-  };
-
-  TryOnWidget.prototype._buildAiModelStep = function () {
-    var self = this; // capture instance for closures below
-    var step = document.createElement('div');
-    step.className = 'tryon-step tryon-ai-step';
-    step.setAttribute('data-step', 'ai');
-    step.setAttribute('hidden', '');
-
-    var header = document.createElement('div');
-    header.className = 'tryon-step-header';
-    var backBtn = document.createElement('button');
-    backBtn.className = 'tryon-back-btn';
-    backBtn.setAttribute('data-tryon-back', 'mode');
-    backBtn.innerHTML = '\u2190 Back';
+    backBtn.innerHTML = '←';
     var stepTitle = document.createElement('span');
     stepTitle.className = 'tryon-step-title';
     stepTitle.textContent = 'Choose Your Look';
@@ -432,60 +362,89 @@
     header.appendChild(stepTitle);
     step.appendChild(header);
 
-    // Gender selection only (body type + skin tone removed — handled by AI)
-    step.appendChild(this._buildSelectorGroup('Gender', [
-      { label: '\u2640 Female', value: 'female', attr: 'data-tryon-gender' },
-      { label: '\u2642 Male',   value: 'male',   attr: 'data-tryon-gender' }
-    ]));
-
-    // Model Image selection
-    var modelSection = document.createElement('div');
-    modelSection.className = 'tryon-selector-group';
-    var modelLabel = document.createElement('div');
-    modelLabel.className = 'tryon-selector-label';
-    modelLabel.textContent = 'Model Image';
+    // 4 model cards in a row
     var modelRow = document.createElement('div');
     modelRow.className = 'tryon-model-cards';
 
-    var m1 = document.createElement('div');
-    m1.className = 'tryon-model-card-item';
-    m1.setAttribute('data-tryon-model-image', 'male');
-    var img1 = document.createElement('img');
-    img1.src = self.modelManUrl; // fixed: use captured self, not global self
-    img1.alt = 'Male Model';
-    img1.onerror = function () {
-      // asset_url is the correct path; no valid fallback exists
-      img1.style.display = 'none';
-      img1.parentElement.style.background = '#f0f0f0';
-    };
-    m1.appendChild(img1);
+    var models = [
+      { url: self.modelManUrl,    value: 'male',    alt: 'Male Model 1'   },
+      { url: self.modelManUrl2,   value: 'male2',   alt: 'Male Model 2'   },
+      { url: self.modelWomanUrl,  value: 'female',  alt: 'Female Model 1' },
+      { url: self.modelWomanUrl2, value: 'female2', alt: 'Female Model 2' }
+    ];
 
-    var m2 = document.createElement('div');
-    m2.className = 'tryon-model-card-item';
-    m2.setAttribute('data-tryon-model-image', 'female');
-    var img2 = document.createElement('img');
-    img2.src = self.modelWomanUrl; // fixed: use captured self, not global self
-    img2.alt = 'Female Model';
-    img2.onerror = function () {
-      // asset_url is the correct path; no valid fallback exists
-      img2.style.display = 'none';
-      img2.parentElement.style.background = '#f0f0f0';
-    };
-    m2.appendChild(img2);
+    for (var i = 0; i < models.length; i++) {
+      (function (m) {
+        var card = document.createElement('div');
+        card.className = 'tryon-model-card-item';
+        card.setAttribute('data-tryon-model-image', m.value);
+        var img = document.createElement('img');
+        img.src = m.url;
+        img.alt = m.alt;
+        img.onerror = function () {
+          img.style.display = 'none';
+          card.style.background = '#f0f0f0';
+        };
+        card.appendChild(img);
+        modelRow.appendChild(card);
+      })(models[i]);
+    }
+    step.appendChild(modelRow);
 
-    modelRow.appendChild(m1);
-    modelRow.appendChild(m2);
-    modelSection.appendChild(modelLabel);
-    modelSection.appendChild(modelRow);
-    step.appendChild(modelSection);
+    // OR divider
+    var orDiv = document.createElement('div');
+    orDiv.className = 'tryon-or-divider';
+    orDiv.textContent = 'or';
+    step.appendChild(orDiv);
 
-    var generate = document.createElement('button');
-    generate.className = 'tryon-btn-primary';
-    generate.setAttribute('data-tryon-generate', '');
-    generate.textContent = 'Generate Look \u2192';
-    generate.disabled = true;
-    generate.style.opacity = '0.4';
-    step.appendChild(generate);
+    // Upload dropzone (also shows photo preview when uploaded)
+    var dropzone = document.createElement('div');
+    dropzone.className = 'tryon-dropzone';
+    var dzIcon = document.createElement('div');
+    dzIcon.className = 'tryon-dropzone-icon';
+    dzIcon.textContent = '📷';
+    var dzLabel = document.createElement('div');
+    dzLabel.className = 'tryon-dropzone-label';
+    dzLabel.innerHTML = 'Upload your photo<br>or <span class="tryon-dropzone-link">browse files</span>';
+    var dzHint = document.createElement('div');
+    dzHint.className = 'tryon-dropzone-hint';
+    dzHint.textContent = 'JPEG, PNG, WebP, HEIC · Max 10 MB';
+    var fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.className = 'tryon-dropzone-input';
+    fileInput.accept = TYPES.join(',');
+    // Photo preview (shown inside the box after upload)
+    var dzPreview = document.createElement('img');
+    dzPreview.className = 'tryon-dropzone-preview';
+    dzPreview.setAttribute('data-tryon-photo-preview', '');
+    dzPreview.alt = 'Your photo';
+    // Remove button
+    var dzRemove = document.createElement('button');
+    dzRemove.className = 'tryon-dropzone-remove';
+    dzRemove.setAttribute('data-tryon-photo-remove', '');
+    dzRemove.type = 'button';
+    dzRemove.innerHTML = '&times;';
+    dropzone.appendChild(dzIcon);
+    dropzone.appendChild(dzLabel);
+    dropzone.appendChild(dzHint);
+    dropzone.appendChild(fileInput);
+    dropzone.appendChild(dzPreview);
+    dropzone.appendChild(dzRemove);
+    step.appendChild(dropzone);
+
+    // CTA button (shared for AI model + upload)
+    var cta = document.createElement('button');
+    cta.className = 'tryon-btn-primary';
+    cta.setAttribute('data-tryon-generate', '');
+    cta.textContent = 'Try It On →';
+    cta.disabled = true;
+    cta.style.opacity = '0.4';
+    step.appendChild(cta);
+
+    var privacy = document.createElement('p');
+    privacy.className = 'tryon-privacy-note';
+    privacy.textContent = 'Photo used only for this try-on and deleted immediately.';
+    step.appendChild(privacy);
 
     return step;
   };
@@ -611,6 +570,23 @@
       consentEl.textContent = CONSENT_TEXT[this.jurisdiction];
     }
 
+    // Restore cached photo from previous opens this session
+    if (!this._userImageData) {
+      try {
+        var cachedPhoto = sessionStorage.getItem('tryon_cached_photo');
+        var cachedMime  = sessionStorage.getItem('tryon_cached_photo_mime');
+        if (cachedPhoto && cachedMime) {
+          var commaIdx = cachedPhoto.indexOf(',');
+          this._userImageData = { base64: cachedPhoto.substring(commaIdx + 1), mimeType: cachedMime };
+          this._cachedPhotoDataUrl = cachedPhoto;
+          var photoPreview = this._panel.querySelector('[data-tryon-photo-preview]');
+          if (photoPreview) { photoPreview.src = cachedPhoto; }
+          var dz = this._panel.querySelector('.tryon-dropzone');
+          if (dz) { dz.classList.add('has-photo'); }
+        }
+      } catch (e2) {}
+    }
+
     var storedConsent = null;
     try { storedConsent = sessionStorage.getItem('tryon_consent_timestamp'); } catch (e) {}
 
@@ -636,7 +612,7 @@
   TryOnWidget.prototype._reset = function () {
     this.mode = null;
     this.file = null;
-    this._userImageData = null;
+    // Keep _userImageData and _cachedPhotoDataUrl — photo persists through the session
     this.aiOptions = { gender: null, modelImage: null };
     this.uploadId = null;
     this.resultUrl = null;
@@ -647,15 +623,6 @@
       this._progressInterval = null;
     }
     this._progressValue = 0;
-
-    var preview = this._panel.querySelector('.tryon-preview');
-    if (preview) { preview.style.display = 'none'; preview.src = ''; }
-
-    var cropGrid = this._panel.querySelector('.tryon-crop-grid');
-    if (cropGrid) { cropGrid.style.display = 'none'; }
-
-    var submit = this._panel.querySelector('[data-tryon-submit]');
-    if (submit) { submit.disabled = true; submit.style.opacity = '0.4'; }
 
     var generate = this._panel.querySelector('[data-tryon-generate]');
     if (generate) { generate.disabled = true; generate.style.opacity = '0.4'; }
@@ -668,6 +635,10 @@
 
     var selected = this._panel.querySelectorAll('.tryon-selector-pill.selected, .tryon-tone-swatch.selected, .tryon-model-card-item.selected');
     for (var i = 0; i < selected.length; i++) { selected[i].classList.remove('selected'); }
+
+    // Deselect dropzone visually (re-selected when look step opens if photo is cached)
+    var dz = this._panel.querySelector('.tryon-dropzone');
+    if (dz) { dz.classList.remove('selected'); }
   };
 
   TryOnWidget.prototype.showStep = function (name) {
@@ -677,6 +648,15 @@
     }
     var target = this._panel.querySelector('[data-step="' + name + '"]');
     if (target) { target.removeAttribute('hidden'); }
+    // When entering the look step, auto-select dropzone (photo) if no AI model is chosen
+    if (name === 'look' && this._userImageData && !this.aiOptions.modelImage) {
+      var dz = this._panel.querySelector('.tryon-dropzone');
+      if (dz) {
+        dz.classList.add('selected');
+        this.mode = 'upload';
+        this._checkAiReady();
+      }
+    }
   };
 
   TryOnWidget.prototype.handleFile = function (file) {
@@ -690,21 +670,53 @@
       return;
     }
     this.file = file;
+    this.mode = 'upload';
 
     var reader = new FileReader();
     reader.onload = function (e) {
-      var preview = self._panel.querySelector('.tryon-preview');
-      var cropGrid = self._panel.querySelector('.tryon-crop-grid');
-      if (preview) {
-        preview.src = e.target.result;
-        preview.style.display = 'block';
-      }
-      if (cropGrid) { cropGrid.style.display = 'block'; }
+      var dataUrl = e.target.result;
+      // Precompute base64 + mimeType so _processUpload skips re-reading
+      var commaIdx = dataUrl.indexOf(',');
+      var mimeType = dataUrl.substring(5, dataUrl.indexOf(';'));
+      self._userImageData = { base64: dataUrl.substring(commaIdx + 1), mimeType: mimeType };
+      self._cachedPhotoDataUrl = dataUrl;
+      // Persist across closes for this session
+      try {
+        sessionStorage.setItem('tryon_cached_photo', dataUrl);
+        sessionStorage.setItem('tryon_cached_photo_mime', mimeType);
+      } catch (e2) {}
+      // Show photo inside the dropzone box
+      self._showUploadPreview(dataUrl);
+      self._checkAiReady();
     };
     reader.readAsDataURL(file);
+  };
 
-    var submit = this._panel.querySelector('[data-tryon-submit]');
-    if (submit) { submit.disabled = false; submit.style.opacity = '1'; }
+  TryOnWidget.prototype._showUploadPreview = function (dataUrl) {
+    var photoPreview = this._panel.querySelector('[data-tryon-photo-preview]');
+    if (photoPreview) { photoPreview.src = dataUrl; }
+    var dz = this._panel.querySelector('.tryon-dropzone');
+    if (dz) { dz.classList.add('has-photo', 'selected'); }
+    // Deselect any model card
+    var allModels = this._panel.querySelectorAll('[data-tryon-model-image]');
+    for (var j = 0; j < allModels.length; j++) { allModels[j].classList.remove('selected'); }
+    this.aiOptions.modelImage = null;
+  };
+
+  TryOnWidget.prototype._clearPhoto = function () {
+    this.file = null;
+    this._userImageData = null;
+    this._cachedPhotoDataUrl = null;
+    try {
+      sessionStorage.removeItem('tryon_cached_photo');
+      sessionStorage.removeItem('tryon_cached_photo_mime');
+    } catch (e) {}
+    var dz = this._panel.querySelector('.tryon-dropzone');
+    if (dz) { dz.classList.remove('has-photo', 'selected'); }
+    var input = this._panel.querySelector('.tryon-dropzone-input');
+    if (input) { input.value = ''; }
+    if (this.mode === 'upload') { this.mode = null; }
+    this._checkAiReady();
   };
   TryOnWidget.prototype.process = function () {
     this.showStep('loading');
@@ -736,8 +748,12 @@
 
     self.updateLoadingText('Preparing your photo\u2026');
 
+    var userImgPromise = self._userImageData
+      ? Promise.resolve(self._userImageData)
+      : fileToBase64(self.file);
+
     var mainFlow = Promise.all([
-      fileToBase64(self.file),
+      userImgPromise,
       imageUrlToBase64(self.productImageUrl)
     ])
       .then(function (results) {
@@ -782,7 +798,8 @@
   // ── AI model mode: use selected model image + product image ───────────────────
   TryOnWidget.prototype._processAiModel = function () {
     var self = this;
-    var modelUrl = self.aiOptions.modelImage === 'male' ? self.modelManUrl : self.modelWomanUrl;
+    var modelUrlMap = { male: self.modelManUrl, male2: self.modelManUrl2, female: self.modelWomanUrl, female2: self.modelWomanUrl2 };
+    var modelUrl = modelUrlMap[self.aiOptions.modelImage] || self.modelManUrl;
     console.log('[TryOn] _processAiModel | modelImage=', self.aiOptions.modelImage, '| modelUrl=', modelUrl, '| productImageUrl=', self.productImageUrl, '| productTitle=', self.productTitle);
 
     if (!self.productImageUrl) {

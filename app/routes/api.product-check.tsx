@@ -22,9 +22,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   // Liquid gives numeric ID; DB stores full GID
   const gid = `gid://shopify/Product/${productId}`;
 
-  const record = await prisma.productState.findUnique({
-    where: { shop_productId: { shop, productId: gid } },
-  });
+  const [record, config] = await Promise.all([
+    prisma.productState.findUnique({
+      where: { shop_productId: { shop, productId: gid } },
+    }),
+    prisma.merchantConfig.findUnique({
+      where: { shop },
+    }),
+  ]);
 
   const enabled = record?.enabled ?? false;
 

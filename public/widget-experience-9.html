@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=412, initial-scale=1.0" />
+  <title>Personalize Your Styling — Slidez</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── Reset ───────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Root shell — exact spec dimensions ──────────────────── */
+    html, body {
+      background: #e8e8e8;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    .phone {
+      position: relative;
+      width: 412px;
+      height: 917px;
+      background: #ffffff;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Status Bar ───────────────────────────────────────────── */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px 8px 20px;
+      background: #000;
+      flex-shrink: 0;
+    }
+
+    .status-time {
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 0.2px;
+    }
+
+    .status-icons {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Signal bars */
+    .icon-signal {
+      display: flex;
+      align-items: flex-end;
+      gap: 2px;
+      height: 13px;
+    }
+    .icon-signal span {
+      display: block;
+      width: 3px;
+      background: #fff;
+      border-radius: 1px;
+    }
+    .icon-signal span:nth-child(1) { height: 4px; }
+    .icon-signal span:nth-child(2) { height: 7px; }
+    .icon-signal span:nth-child(3) { height: 10px; }
+    .icon-signal span:nth-child(4) { height: 13px; }
+
+    /* Wifi */
+    .icon-wifi svg { display: block; }
+
+    /* Battery */
+    .icon-battery {
+      display: flex;
+      align-items: center;
+      gap: 1px;
+    }
+    .battery-body {
+      width: 22px;
+      height: 12px;
+      border: 1.5px solid #fff;
+      border-radius: 2.5px;
+      padding: 1.5px;
+      position: relative;
+    }
+    .battery-fill {
+      height: 100%;
+      width: 75%;
+      background: #fff;
+      border-radius: 1px;
+    }
+    .battery-tip {
+      width: 2px;
+      height: 6px;
+      background: rgba(255,255,255,0.5);
+      border-radius: 0 1px 1px 0;
+    }
+
+    /* ── Main Content ─────────────────────────────────────────── */
+    .content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 0 24px;
+      background: #fff;
+    }
+
+    /* Back button */
+    .back-btn {
+      margin-top: 24px;
+      margin-bottom: 32px;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      padding: 0;
+      border-radius: 50%;
+      transition: background 0.15s ease;
+    }
+    .back-btn:hover { background: rgba(0,0,0,0.05); }
+    .back-btn svg {
+      display: block;
+    }
+
+    /* Heading */
+    .heading {
+      font-size: 34px;
+      font-weight: 800;
+      color: #0a0a0a;
+      line-height: 1.15;
+      letter-spacing: -0.5px;
+      margin-bottom: 16px;
+    }
+
+    /* Subtext */
+    .subtext {
+      font-size: 15px;
+      font-weight: 400;
+      color: #555;
+      line-height: 1.5;
+      margin-bottom: 40px;
+    }
+
+    /* ── Gender Options ───────────────────────────────────────── */
+    .options {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .option-btn {
+      width: 100%;
+      padding: 20px 24px;
+      border: 1.5px solid #d4d4d4;
+      border-radius: 50px;
+      background: #ffffff;
+      font-family: 'Inter', sans-serif;
+      font-size: 16px;
+      font-weight: 500;
+      color: #0a0a0a;
+      text-align: left;
+      cursor: pointer;
+      transition:
+        border-color 0.2s ease,
+        background 0.2s ease,
+        transform 0.1s ease,
+        box-shadow 0.2s ease;
+      -webkit-tap-highlight-color: transparent;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .option-btn::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 50px;
+      background: rgba(0,0,0,0);
+      transition: background 0.15s ease;
+    }
+
+    .option-btn:hover {
+      border-color: #0a0a0a;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    }
+
+    .option-btn:hover::after {
+      background: rgba(0,0,0,0.02);
+    }
+
+    .option-btn:active {
+      transform: scale(0.985);
+      border-color: #0a0a0a;
+      background: #f5f5f5;
+    }
+
+    .option-btn.selected {
+      border-color: #0a0a0a;
+      border-width: 2px;
+      background: #f8f8f8;
+      box-shadow: 0 0 0 3px rgba(0,0,0,0.06);
+    }
+
+    .option-btn.selected .option-check {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .option-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .option-check {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #0a0a0a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transform: scale(0.6);
+      transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+      flex-shrink: 0;
+    }
+
+    .option-check svg { display: block; }
+
+    /* ── Spacer ───────────────────────────────────────────────── */
+    .spacer { flex: 1; }
+
+    /* ── Continue Button ──────────────────────────────────────── */
+    .continue-area {
+      padding: 0 0 0 0;
+      flex-shrink: 0;
+    }
+
+    .continue-btn {
+      display: block;
+      width: 100%;
+      padding: 20px 24px;
+      background: #0a0a0a;
+      color: #ffffff;
+      font-family: 'Inter', sans-serif;
+      font-size: 17px;
+      font-weight: 600;
+      text-align: center;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      letter-spacing: 0.1px;
+      transition:
+        background 0.2s ease,
+        transform 0.12s ease,
+        box-shadow 0.2s ease;
+      -webkit-tap-highlight-color: transparent;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .continue-btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 50px;
+      background: rgba(255,255,255,0);
+      transition: background 0.15s ease;
+    }
+
+    .continue-btn:hover {
+      background: #1a1a1a;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+    }
+
+    .continue-btn:hover::before {
+      background: rgba(255,255,255,0.04);
+    }
+
+    .continue-btn:active {
+      transform: scale(0.975);
+      box-shadow: none;
+    }
+
+    .continue-btn:disabled {
+      background: #c0c0c0;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+    .continue-btn:disabled:active { transform: none; }
+
+    /* ── Android Nav Bar ──────────────────────────────────────── */
+    .nav-bar {
+      height: 48px;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      flex-shrink: 0;
+      padding: 0 32px;
+    }
+
+    .nav-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.75;
+    }
+
+    /* Chevron (back) */
+    .nav-back svg,
+    .nav-home svg,
+    .nav-recent svg {
+      display: block;
+    }
+
+    /* ── Ripple animation on select ───────────────────────────── */
+    @keyframes ripple {
+      0%   { transform: scale(0); opacity: 0.35; }
+      100% { transform: scale(4); opacity: 0; }
+    }
+
+    .ripple-dot {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.12);
+      width: 60px;
+      height: 60px;
+      pointer-events: none;
+      transform: scale(0);
+      animation: ripple 0.5s ease-out forwards;
+    }
+  </style>
+</head>
+<body>
+
+<div class="phone" id="widget-root" role="main">
+
+  <!-- Status Bar -->
+  <div class="status-bar" aria-hidden="true">
+    <span class="status-time">10:00</span>
+    <div class="status-icons">
+      <!-- Signal -->
+      <div class="icon-signal">
+        <span></span><span></span><span></span><span></span>
+      </div>
+      <!-- Wifi -->
+      <div class="icon-wifi">
+        <svg width="16" height="12" viewBox="0 0 24 18" fill="none" aria-hidden="true">
+          <path d="M12 14.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3z" fill="#fff"/>
+          <path d="M5.5 10.5C7.2 8.8 9.5 7.8 12 7.8s4.8 1 6.5 2.7" stroke="#fff" stroke-width="2" stroke-linecap="round" fill="none"/>
+          <path d="M1 6.5C3.8 3.7 7.7 2 12 2s8.2 1.7 11 4.5" stroke="#fff" stroke-width="2" stroke-linecap="round" fill="none"/>
+        </svg>
+      </div>
+      <!-- Battery -->
+      <div class="icon-battery">
+        <div class="battery-body">
+          <div class="battery-fill"></div>
+        </div>
+        <div class="battery-tip"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="content">
+
+    <!-- Back Button -->
+    <button
+      class="back-btn"
+      id="btn-back"
+      aria-label="Go back"
+      onclick="handleBack()"
+    >
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+           stroke="#0a0a0a" stroke-width="2.2"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M19 12H5M12 5l-7 7 7 7"/>
+      </svg>
+    </button>
+
+    <!-- Heading -->
+    <h1 class="heading">Personalize your styling</h1>
+
+    <!-- Subtitle -->
+    <p class="subtext">Choose your gender to get more relevant looks</p>
+
+    <!-- Options -->
+    <div class="options" role="radiogroup" aria-label="Gender selection">
+
+      <button
+        class="option-btn"
+        id="btn-men"
+        role="radio"
+        aria-checked="false"
+        aria-label="Men"
+        onclick="selectOption('men', event)"
+      >
+        <div class="option-inner">
+          <span>Men</span>
+          <span class="option-check" aria-hidden="true">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                 stroke="#fff" stroke-width="3"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          </span>
+        </div>
+      </button>
+
+      <button
+        class="option-btn"
+        id="btn-women"
+        role="radio"
+        aria-checked="false"
+        aria-label="Women"
+        onclick="selectOption('women', event)"
+      >
+        <div class="option-inner">
+          <span>Women</span>
+          <span class="option-check" aria-hidden="true">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                 stroke="#fff" stroke-width="3"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          </span>
+        </div>
+      </button>
+
+    </div>
+
+    <div class="spacer"></div>
+
+    <!-- Continue -->
+    <div class="continue-area" style="padding-bottom: 24px;">
+      <button
+        class="continue-btn"
+        id="btn-continue"
+        disabled
+        onclick="handleContinue()"
+        aria-label="Continue to next step"
+      >
+        Continue
+      </button>
+    </div>
+
+  </div>
+
+  <!-- Android Nav Bar -->
+  <div class="nav-bar" aria-hidden="true">
+    <!-- Back chevron -->
+    <div class="nav-icon nav-back">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+           stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="15 18 9 12 15 6"/>
+      </svg>
+    </div>
+    <!-- Home circle -->
+    <div class="nav-icon nav-home">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+           stroke="#fff" stroke-width="1.8">
+        <circle cx="12" cy="12" r="9"/>
+      </svg>
+    </div>
+    <!-- Recent square -->
+    <div class="nav-icon nav-recent">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+           stroke="#fff" stroke-width="1.8" stroke-linecap="round">
+        <rect x="4" y="4" width="16" height="16" rx="2"/>
+      </svg>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  let selected = null;
+
+  function selectOption(gender, event) {
+    selected = gender;
+
+    const menBtn    = document.getElementById('btn-men');
+    const womenBtn  = document.getElementById('btn-women');
+    const continueBtn = document.getElementById('btn-continue');
+
+    // Reset both
+    [menBtn, womenBtn].forEach(btn => {
+      btn.classList.remove('selected');
+      btn.setAttribute('aria-checked', 'false');
+    });
+
+    // Activate chosen
+    const active = gender === 'men' ? menBtn : womenBtn;
+    active.classList.add('selected');
+    active.setAttribute('aria-checked', 'true');
+
+    // Ripple effect
+    if (event) {
+      const rect = active.getBoundingClientRect();
+      const ripple = document.createElement('span');
+      ripple.className = 'ripple-dot';
+      ripple.style.left = (event.clientX - rect.left - 30) + 'px';
+      ripple.style.top  = (event.clientY - rect.top  - 30) + 'px';
+      active.appendChild(ripple);
+      setTimeout(() => ripple.remove(), 500);
+    }
+
+    // Enable continue
+    continueBtn.disabled = false;
+
+    console.log('[Widget] Gender selected:', gender);
+  }
+
+  function handleBack() {
+    console.log('[Widget] Back pressed');
+    // Hook: dispatch custom event for parent integration
+    window.dispatchEvent(new CustomEvent('slidez:onboarding:back', { detail: { step: 'gender' } }));
+  }
+
+  function handleContinue() {
+    if (!selected) return;
+    console.log('[Widget] Continue pressed with gender:', selected);
+    // Hook: dispatch custom event for parent integration
+    window.dispatchEvent(new CustomEvent('slidez:onboarding:continue', { detail: { gender: selected } }));
+
+    // Visual feedback — brief button animation
+    const btn = document.getElementById('btn-continue');
+    btn.style.transform = 'scale(0.97)';
+    setTimeout(() => { btn.style.transform = ''; }, 120);
+  }
+</script>
+</body>
+</html>
