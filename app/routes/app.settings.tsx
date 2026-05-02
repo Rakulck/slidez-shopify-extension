@@ -8,6 +8,7 @@ import {
   Card,
   BlockStack,
   InlineStack,
+  InlineGrid,
   TextField,
   Select,
   Checkbox,
@@ -309,71 +310,95 @@ export default function Settings() {
               </BlockStack>
             </Card>
 
-            {/* Button Appearance */}
-            <Card>
-              <BlockStack gap="400">
-                <InlineStack align="space-between" blockAlign="center">
+            {/* Button Appearance + Live Preview side by side */}
+            <InlineGrid columns={["twoThirds", "oneThird"]} gap="400">
+              <Card>
+                <BlockStack gap="400">
                   <Text as="h2" variant="headingMd">
                     Button Appearance
                   </Text>
-                  <Badge tone="info">Live preview →</Badge>
-                </InlineStack>
 
-                <TextField
-                  label="Button text"
-                  value={buttonText}
-                  onChange={setButtonText}
-                  autoComplete="off"
-                  helpText="Shown on the try-on button in your storefront."
-                />
+                  <TextField
+                    label="Button text"
+                    value={buttonText}
+                    onChange={setButtonText}
+                    autoComplete="off"
+                    helpText="Shown on the try-on button in your storefront."
+                  />
 
-                {/* Color picker */}
-                <BlockStack gap="200">
-                  <Text as="p" variant="bodyMd" fontWeight="medium">
-                    Button color
-                  </Text>
-                  <InlineStack gap="300" blockAlign="center">
-                    <button
-                      type="button"
-                      onClick={() => setShowColorPicker((v) => !v)}
-                      aria-label="Pick button color"
-                      style={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: 8,
-                        backgroundColor: buttonColor,
-                        border: "2px solid #c9cccf",
-                        cursor: "pointer",
-                        flexShrink: 0,
-                        outline: "none",
-                      }}
-                    />
-                    <Text as="span" variant="bodyMd" tone="subdued">
-                      {buttonColor.toUpperCase()}
+                  {/* Color picker */}
+                  <BlockStack gap="200">
+                    <Text as="p" variant="bodyMd" fontWeight="medium">
+                      Button color
                     </Text>
-                    <Text as="span" variant="bodySm" tone="subdued">
-                      {showColorPicker ? "Click swatch to close" : "Click swatch to edit"}
-                    </Text>
-                  </InlineStack>
-                  {showColorPicker && (
-                    <div style={{ maxWidth: 220, paddingTop: 4 }}>
-                      <ColorPicker color={colorHsb} onChange={handleColorChange} />
-                    </div>
-                  )}
+                    <InlineStack gap="300" blockAlign="center">
+                      <button
+                        type="button"
+                        onClick={() => setShowColorPicker((v) => !v)}
+                        aria-label="Pick button color"
+                        style={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: 8,
+                          backgroundColor: buttonColor,
+                          border: "2px solid #c9cccf",
+                          cursor: "pointer",
+                          flexShrink: 0,
+                          outline: "none",
+                        }}
+                      />
+                      <Text as="span" variant="bodyMd" tone="subdued">
+                        {buttonColor.toUpperCase()}
+                      </Text>
+                      <Text as="span" variant="bodySm" tone="subdued">
+                        {showColorPicker ? "Click swatch to close" : "Click swatch to edit"}
+                      </Text>
+                    </InlineStack>
+                    {showColorPicker && (
+                      <div style={{ maxWidth: 220, paddingTop: 4 }}>
+                        <ColorPicker color={colorHsb} onChange={handleColorChange} />
+                      </div>
+                    )}
+                  </BlockStack>
+
+                  {/* Corner style */}
+                  <Select
+                    label="Corner style"
+                    options={[
+                      { label: "Square", value: "square" },
+                      { label: "Rounded", value: "rounded" },
+                    ]}
+                    value={cornerStyle}
+                    onChange={(v) => setCornerStyle(v as "square" | "rounded")}
+                  />
                 </BlockStack>
+              </Card>
 
-                {/* Corner style */}
-                <Select
-                  label="Corner style"
-                  options={[
-                    { label: "Square", value: "square" },
-                    { label: "Rounded", value: "rounded" },
-                  ]}
-                  value={cornerStyle}
-                  onChange={(v) => setCornerStyle(v as "square" | "rounded")}
-                />
-              </BlockStack>
-            </Card>
+              <Card>
+                <BlockStack gap="300">
+                  <InlineStack align="space-between" blockAlign="center">
+                    <Text as="h2" variant="headingMd">
+                      Live Preview
+                    </Text>
+                    <Badge tone="success">Real-time</Badge>
+                  </InlineStack>
+                  <Text as="p" variant="bodySm" tone="subdued">
+                    Updates instantly as you change settings.
+                  </Text>
+                  <WidgetPreview
+                    buttonText={buttonText}
+                    buttonColor={buttonColor}
+                    buttonPosition={buttonPosition}
+                    borderRadius={cornerStyle === "square" ? 0 : 6}
+                    fullWidth={true}
+                  />
+                  <Divider />
+                  <Text as="p" variant="bodySm" tone="subdued">
+                    These settings apply to your storefront automatically after saving — no theme editor changes needed.
+                  </Text>
+                </BlockStack>
+              </Card>
+            </InlineGrid>
 
             {/* Layout & Placement */}
             <Card>
@@ -421,35 +446,7 @@ export default function Settings() {
           </BlockStack>
         </Layout.Section>
 
-        {/* ── Right: Live preview ── */}
-        <Layout.Section variant="oneThird">
-          <div style={{ position: "sticky", top: 16, marginTop: -160 }}>
-            <Card>
-              <BlockStack gap="300">
-                <InlineStack align="space-between" blockAlign="center">
-                  <Text as="h2" variant="headingMd">
-                    Live Preview
-                  </Text>
-                  <Badge tone="success">Real-time</Badge>
-                </InlineStack>
-                <Text as="p" variant="bodySm" tone="subdued">
-                  Updates instantly as you change settings.
-                </Text>
-                <WidgetPreview
-                  buttonText={buttonText}
-                  buttonColor={buttonColor}
-                  buttonPosition={buttonPosition}
-                  borderRadius={cornerStyle === "square" ? 0 : 6}
-                  fullWidth={true}
-                />
-                <Divider />
-                <Text as="p" variant="bodySm" tone="subdued">
-                  These settings apply to your storefront automatically after saving — no theme editor changes needed.
-                </Text>
-              </BlockStack>
-            </Card>
-          </div>
-        </Layout.Section>
+
       </Layout>
     </Page>
   );
