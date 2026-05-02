@@ -171,7 +171,7 @@
       }
     });
 
-    // Gender pills — set gender then navigate to combined look step
+    // Gender pills — build model cards for selected gender, then navigate to look step
     var genderBtns = panel.querySelectorAll('[data-tryon-gender]');
     for (i = 0; i < genderBtns.length; i++) {
       (function (btn) {
@@ -180,28 +180,66 @@
           for (var j = 0; j < all.length; j++) { all[j].classList.remove('selected'); }
           btn.classList.add('selected');
           self.aiOptions.gender = btn.getAttribute('data-tryon-gender');
+          self.aiOptions.modelImage = null;
+
+          // Rebuild model cards for the selected gender
+          var container = panel.querySelector('.tryon-models-container');
+          if (container) {
+            container.innerHTML = '';
+            var genderModels = self.aiOptions.gender === 'female'
+              ? [
+                  { url: self.modelWomanUrl,  value: 'female',  alt: 'Female Model 1' },
+                  { url: self.modelWomanUrl2, value: 'female2', alt: 'Female Model 2' }
+                ]
+              : [
+                  { url: self.modelManUrl,  value: 'male',  alt: 'Male Model 1' },
+                  { url: self.modelManUrl2, value: 'male2', alt: 'Male Model 2' }
+                ];
+            var modelRow = document.createElement('div');
+            modelRow.className = 'tryon-model-cards';
+            for (var k = 0; k < genderModels.length; k++) {
+              (function (m) {
+                var card = document.createElement('div');
+                card.className = 'tryon-model-card-item';
+                card.setAttribute('data-tryon-model-image', m.value);
+                var img = document.createElement('img');
+                img.src = m.url;
+                img.alt = m.alt;
+                img.onerror = function () {
+                  img.style.display = 'none';
+                  card.style.background = '#f0f0f0';
+                };
+                card.appendChild(img);
+                modelRow.appendChild(card);
+              })(genderModels[k]);
+            }
+            container.appendChild(modelRow);
+          }
+
           self.showStep('look');
         });
       })(genderBtns[i]);
     }
 
-    // Model image selection — sets mode to 'ai', deselects photo card (keeps cached photo)
-    var modelImgBtns = panel.querySelectorAll('[data-tryon-model-image]');
-    for (i = 0; i < modelImgBtns.length; i++) {
-      (function (btn) {
-        btn.addEventListener('click', function () {
+    // Model card clicks — delegated so dynamically created cards are handled
+    panel.addEventListener('click', function (e) {
+      var node = e.target;
+      while (node && node !== panel) {
+        if (node.getAttribute && node.getAttribute('data-tryon-model-image') !== null) {
           var all = panel.querySelectorAll('[data-tryon-model-image]');
           for (var j = 0; j < all.length; j++) { all[j].classList.remove('selected'); }
-          btn.classList.add('selected');
-          self.aiOptions.modelImage = btn.getAttribute('data-tryon-model-image');
+          node.classList.add('selected');
+          self.aiOptions.modelImage = node.getAttribute('data-tryon-model-image');
           self.mode = 'ai';
           self.file = null;
           var dz = panel.querySelector('.tryon-dropzone');
           if (dz) { dz.classList.remove('selected'); }
           self._checkAiReady();
-        });
-      })(modelImgBtns[i]);
-    }
+          return;
+        }
+        node = node.parentNode;
+      }
+    });
 
     // Dropzone click — when showing a photo, re-selects upload mode (no file dialog)
     var dropzoneEl = panel.querySelector('.tryon-dropzone');
@@ -362,34 +400,10 @@
     header.appendChild(stepTitle);
     step.appendChild(header);
 
-    // 4 model cards in a row
-    var modelRow = document.createElement('div');
-    modelRow.className = 'tryon-model-cards';
-
-    var models = [
-      { url: self.modelManUrl,    value: 'male',    alt: 'Male Model 1'   },
-      { url: self.modelManUrl2,   value: 'male2',   alt: 'Male Model 2'   },
-      { url: self.modelWomanUrl,  value: 'female',  alt: 'Female Model 1' },
-      { url: self.modelWomanUrl2, value: 'female2', alt: 'Female Model 2' }
-    ];
-
-    for (var i = 0; i < models.length; i++) {
-      (function (m) {
-        var card = document.createElement('div');
-        card.className = 'tryon-model-card-item';
-        card.setAttribute('data-tryon-model-image', m.value);
-        var img = document.createElement('img');
-        img.src = m.url;
-        img.alt = m.alt;
-        img.onerror = function () {
-          img.style.display = 'none';
-          card.style.background = '#f0f0f0';
-        };
-        card.appendChild(img);
-        modelRow.appendChild(card);
-      })(models[i]);
-    }
-    step.appendChild(modelRow);
+    // Model cards are injected here dynamically when gender is selected
+    var modelsContainer = document.createElement('div');
+    modelsContainer.className = 'tryon-models-container';
+    step.appendChild(modelsContainer);
 
     // OR divider
     var orDiv = document.createElement('div');

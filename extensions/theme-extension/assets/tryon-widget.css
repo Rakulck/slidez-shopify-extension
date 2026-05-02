@@ -327,6 +327,19 @@
 .tryon-look-step {
   gap: 16px;
 }
+.tryon-model-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tryon-model-group-label {
+  font-family: 'Geist', 'Inter', system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #888;
+}
 .tryon-selector-group {
   display: flex;
   flex-direction: column;
@@ -428,7 +441,7 @@
   position: relative;
   flex: 1 1 0;
   min-width: 0;
-  height: 140px;
+  aspect-ratio: 4 / 5;
   border-radius: 20px;
   overflow: hidden;
   border: 1px solid #5F5F5F;
