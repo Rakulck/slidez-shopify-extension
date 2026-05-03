@@ -49,7 +49,7 @@ export async function action({ request }: ActionFunctionArgs) {
       // Check if merchant has reached their hard limit
       const check = await shopify.billing.check(session, {
         plans: [MONTHLY_PLAN_GROWTH, MONTHLY_PLAN_PRO, MONTHLY_PLAN_ENTERPRISE],
-        isTest: true,
+        isTest: process.env.NODE_ENV !== "production",
       });
 
       const analytics = await firebaseGet("/analytics?range=30", shop);

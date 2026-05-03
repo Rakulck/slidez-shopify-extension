@@ -26,7 +26,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   const billingCheck = await billing.check({
     plans: [MONTHLY_PLAN_GROWTH, MONTHLY_PLAN_PRO, MONTHLY_PLAN_ENTERPRISE],
-    isTest: true, // Set to false in production
+    isTest: process.env.NODE_ENV !== "production",
   });
 
   const merchantOnboarding = await prisma.merchantConfig.findUnique({

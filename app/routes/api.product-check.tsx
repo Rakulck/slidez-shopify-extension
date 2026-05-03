@@ -39,7 +39,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const { session } = await unauthenticated.admin(shop);
     const check = await shopify.billing.check(session, {
       plans: [MONTHLY_PLAN_GROWTH, MONTHLY_PLAN_PRO, MONTHLY_PLAN_ENTERPRISE],
-      isTest: true,
+      isTest: process.env.NODE_ENV !== "production",
     });
 
     const analytics = await firebaseGet("/analytics?range=30", shop);

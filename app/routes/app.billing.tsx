@@ -46,8 +46,7 @@ const FALLBACK_PLANS: Plan[] = [
     features: [
       "2,500 try-ons included",
       "$0.08 per extra try-on",
-      "API access",
-      "White-label option",
+      "Dedicated support",
       "7-day free trial",
     ],
   },
@@ -59,7 +58,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   
   const billingCheck = await billing.check({
     plans: [MONTHLY_PLAN_GROWTH, MONTHLY_PLAN_PRO, MONTHLY_PLAN_ENTERPRISE],
-    isTest: true, // Set to false in production
+    isTest: process.env.NODE_ENV !== "production",
   });
 
   const justUpgraded = url.searchParams.get("upgraded") === "true";
@@ -95,7 +94,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   return await billing.request({
     plan: planName,
-    isTest: true, // Set to false in production
+    isTest: process.env.NODE_ENV !== "production",
     returnUrl: `${process.env.SHOPIFY_APP_URL}/app/billing?upgraded=true`,
   });
 };
