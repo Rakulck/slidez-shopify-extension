@@ -61,7 +61,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     isTest: process.env.NODE_ENV !== "production",
   });
 
-  const justUpgraded = url.searchParams.get("upgraded") === "true";
+  const justUpgraded = url.searchParams.get("upgraded") === "true" && billingCheck.hasActivePayment;
   
   // Find the active plan name from Shopify subscriptions
   let currentPlan = "free";
@@ -374,7 +374,7 @@ export default function Billing() {
 
         <div className="pricing-header">
           <h1>Choose Your Plan</h1>
-          <p>Boost your sales with our virtual try-on technology</p>
+          <p>Add AI virtual try-on to your product pages — no code required</p>
           <div style={{ display: 'inline-flex', alignItems: 'center', background: '#F3F4F6', padding: '6px 16px', borderRadius: '9999px', fontSize: '0.875rem', fontWeight: 600, color: '#4B5563' }}>
             <span style={{ marginRight: '8px', color: '#10B981' }}>●</span>
             Your current active plan is <strong style={{ color: '#111827', marginLeft: '4px', textTransform: 'capitalize' }}>{currentPlan}</strong>

@@ -120,6 +120,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   }
 
   return json({
+    shop,
     defaultButtonText: config?.buttonText ?? "Try It On",
     defaultButtonColor: config?.buttonColor ?? "#6366F1",
     defaultButtonPosition:
@@ -157,6 +158,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function Onboarding() {
+  const { shop } = useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
 
   const [state, setState] = useState<OnboardingState>({
@@ -244,6 +246,7 @@ export default function Onboarding() {
           <StepComplete
             storeType={state.storeType}
             planChosen={state.planChosen}
+            shop={shop}
             onBack={goBack}
           />
         )}
@@ -499,13 +502,17 @@ function StepPricing({
 function StepComplete({
   storeType,
   planChosen,
+  shop,
   onBack,
 }: {
   storeType: StoreType | null;
   planChosen: PlanId | null;
+  shop: string;
   onBack: () => void;
 }) {
   const particles = Array.from({ length: 40 }, (_, i) => i);
+
+  const themeEditorUrl = `https://${shop}/admin/themes/current/editor?context=apps&activateAppId=72f82a63b0e306e2138f3fcc90cdd779/virtual-tryon-widget`;
 
   return (
     <div className={styles.stepComplete}>
@@ -527,31 +534,43 @@ function StepComplete({
       </div>
 
       <div className={styles.completeContent}>
-        <h2 className={styles.stepHeading}>Your store is ready for AI Try-On</h2>
+        <h2 className={styles.stepHeading}>Setup complete</h2>
         <p className={styles.stepSubtext}>
-          Shoppers can now try on products right from your store.
+          One last step — add the try-on button to your product pages.
         </p>
+
+        {/* Theme Editor setup — required per Shopify req 5.1.3 */}
+        <div className={styles.themeSetupBox}>
+          <p className={styles.themeSetupLabel}>Required: enable in your theme</p>
+          <p className={styles.themeSetupText}>
+            Add the try-on button to your product pages in the Theme Editor:
+          </p>
+          <ol className={styles.themeSetupSteps}>
+            <li>Click <strong>Open Theme Editor</strong> below</li>
+            <li>Navigate to a <strong>product page</strong> template</li>
+            <li>Click <strong>Add block</strong> → <strong>Apps</strong> → <strong>Virtual Try-On Widget</strong></li>
+            <li>Click <strong>Save</strong></li>
+          </ol>
+          <button
+            type="button"
+            className={styles.btnPrimary}
+            onClick={() => window.open(themeEditorUrl, "_top")}
+          >
+            Open Theme Editor
+          </button>
+          <p className={styles.themeSetupNote}>
+            Using an older theme without App Blocks (Debut, Brooklyn, Narrative)?{" "}
+            Your dashboard has manual setup instructions.
+          </p>
+        </div>
 
         <Form method="post">
           <input type="hidden" name="storeType" value={storeType ?? ""} />
           <input type="hidden" name="planChosen" value={planChosen ?? "skip"} />
-          <Button
-            submit
-            variant="primary"
-            size="large"
-            onClick={() => console.log("[Onboarding] View Dashboard submitted")}
-          >
-            View Dashboard
-          </Button>
+          <button type="submit" className={styles.btnSecondary}>
+            Go to Dashboard
+          </button>
         </Form>
-
-        <Button
-          variant="tertiary"
-          url="/app/products"
-          className={styles.btnSecondary}
-        >
-          Test Live Store
-        </Button>
 
         <button type="button" className={styles.btnLink} onClick={onBack}>
           <IconBack /> Go back

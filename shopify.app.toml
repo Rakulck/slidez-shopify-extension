@@ -2,7 +2,7 @@
 
 client_id = "72f82a63b0e306e2138f3fcc90cdd779"
 name = "Slidez AI Try-On"
-application_url = "https://slidez-shopify-extension.vercel.app"
+application_url = "https://slidez-virtual-tryon.vercel.app"
 embedded = true
 
 [build]
@@ -19,22 +19,47 @@ api_version = "2026-07"
   topics = [ "app/scopes_update" ]
   uri = "/webhooks/app/scopes_update"
 
+  [[webhooks.subscriptions]]
+  compliance_topics = [ "customers/data_request", "customers/redact", "shop/redact" ]
+  uri = "https://slidez-virtual-tryon.vercel.app/api/webhooks"
+
 [access_scopes]
 scopes = "read_products"
 
 [auth]
-redirect_urls = [ "https://slidez-shopify-extension.vercel.app/auth/callback" ]
+redirect_urls = [ "https://slidez-virtual-tryon.vercel.app/auth/callback" ]
 
 [app_proxy]
-url = "https://slidez-shopify-extension.vercel.app/api/product-check"
+url = "https://slidez-virtual-tryon.vercel.app/api/product-check"
 subpath = "try-on"
 prefix = "apps"
 
 # ── Partner Dashboard fields (enter these at partners.shopify.com, not here) ──
+#
 # Name:          Slidez AI Try-On
-# Tagline:       Boost sales with AI virtual try-on
-# Description:   Increase sales with AI virtual try-on. Let shoppers try clothes, makeup, and accessories before buying to boost conversions and reduce returns.
+#
+# Tagline:       AI-powered virtual try-on for clothes, makeup & accessories
+#   ↑ OLD (non-compliant): "Boost sales with AI virtual try-on"
+#   ↑ Shopify bans unsubstantiated result claims ("boost sales") in taglines (req 4.3.3)
+#
+# Description:
+#   Add AI-powered virtual try-on to your online store. Shoppers can see how
+#   clothes, makeup, and accessories look on them before purchasing — directly
+#   from your product pages. Enable try-on per product, customise the widget
+#   colours and button text, and view try-on activity in the analytics dashboard.
+#   ↑ OLD (non-compliant): "…boost conversions and reduce returns"
+#   ↑ Removed: unsubstantiated outcome claims are rejected under req 4.3.3
+#
 # Category:      Fashion / Clothing
+#
 # Support email: info@slidez.social
-# Privacy URL:   https://slidez.social/privacy  ← host the PDF as a webpage first
-# Logo:          1200x1200px PNG  ← still needed
+#
+# Privacy URL:   https://slidez.social/privacy  ← must be a live webpage, not a PDF
+#
+# Logo:          1200×1200 px PNG  ← still needed
+#
+# ── REQUIRED CHECKBOX (App Setup → Distribution → App listing) ──────────────
+# ☑  "Does your app require the Online Store sales channel?"  → CHECK THIS BOX
+#    This app uses a theme app extension — it only works on stores with an
+#    active Online Store. Shopify WILL reject the listing if this is not set.
+#    (Requirement 4.3.1)

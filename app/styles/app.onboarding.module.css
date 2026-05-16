@@ -712,6 +712,66 @@
 }
 
 /* ═══════════════════════════════════════════════════════════
+   STEP 5 — THEME SETUP BOX
+═══════════════════════════════════════════════════════════ */
+
+.themeSetupBox {
+  width: 100%;
+  max-width: 420px;
+  margin: 4px 0 16px;
+  padding: 20px 22px;
+  background: var(--ob-surface);
+  border: 1px solid var(--ob-border);
+  border-radius: var(--ob-radius-card);
+  text-align: left;
+}
+
+.themeSetupLabel {
+  font-family: var(--ob-font);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ob-brand);
+  margin: 0 0 6px;
+}
+
+.themeSetupText {
+  font-family: var(--ob-font);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--ob-text);
+  margin: 0 0 12px;
+}
+
+.themeSetupSteps {
+  padding-left: 18px;
+  margin: 0 0 16px;
+}
+
+.themeSetupSteps li {
+  font-family: var(--ob-font);
+  font-size: 0.875rem;
+  color: #4b5563;
+  margin-bottom: 7px;
+  line-height: 1.5;
+}
+
+.themeSetupNote {
+  font-family: var(--ob-font);
+  font-size: 0.8125rem;
+  color: var(--ob-text-sub);
+  margin: 12px 0 0;
+  line-height: 1.5;
+}
+
+/* Override max-width from .completeContent rule so button fills the box */
+.themeSetupBox .btnPrimary {
+  max-width: none;
+  margin-top: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════
    UTILITIES
 ═══════════════════════════════════════════════════════════ */
 

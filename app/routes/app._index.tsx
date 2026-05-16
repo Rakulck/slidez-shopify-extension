@@ -24,10 +24,17 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { billing, session } = await authenticate.admin(request);
   const shop = session.shop;
 
-  const billingCheck = await billing.check({
-    plans: [MONTHLY_PLAN_GROWTH, MONTHLY_PLAN_PRO, MONTHLY_PLAN_ENTERPRISE],
-    isTest: process.env.NODE_ENV !== "production",
-  });
+  let billingCheck: any = { hasActivePayment: false };
+  if (billing) {
+    try {
+      billingCheck = await billing.check({
+        plans: [MONTHLY_PLAN_GROWTH, MONTHLY_PLAN_PRO, MONTHLY_PLAN_ENTERPRISE],
+        isTest: process.env.NODE_ENV !== "production",
+      });
+    } catch (e) {
+      console.error("Billing check failed:", e);
+    }
+  }
 
   const merchantOnboarding = await prisma.merchantConfig.findUnique({
     where: { shop },
