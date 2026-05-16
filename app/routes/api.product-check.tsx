@@ -13,6 +13,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     url.searchParams.get("shop") ??
     "";
 
+  // Broad CORS is intentional: this route is served via Shopify App Proxy, which
+  // verifies requests with HMAC before forwarding. The storefront theme widget
+  // needs to call this endpoint cross-origin from the shop's domain.
   const CORS = { "Access-Control-Allow-Origin": "*" };
 
   if (!shop || !productId) {

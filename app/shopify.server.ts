@@ -18,6 +18,8 @@ const shopify = shopifyApp({
   scopes: process.env.SCOPES?.split(","),
   appUrl: process.env.SHOPIFY_APP_URL || "",
   authPathPrefix: "/auth",
+  // Type cast required: PrismaSessionStorage generic doesn't satisfy the strict
+  // SessionStorage<Session> constraint due to Prisma's generated client types.
   sessionStorage: new PrismaSessionStorage(prisma) as any,
   distribution: AppDistribution.AppStore,
   billing: {
